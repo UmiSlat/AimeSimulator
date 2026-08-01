@@ -1,0 +1,26 @@
+# Android and Gradle output
+.gradle/
+build/
+app/build/
+**/.cxx/
+**/.externalNativeBuild/
+captures/
+dist/
+
+# IDE and machine state
+.idea/
+*.iml
+.vscode/
+local.properties
+
+# Signing material
+*.jks
+*.keystore
+
+# Tool caches
+__pycache__/
+*.py[cod]
+
+# Operating-system metadata
+.DS_Store
+Thumbs.db
