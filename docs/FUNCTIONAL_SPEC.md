@@ -59,7 +59,9 @@ encoded as `51 08 <PMm>` or `40 12 <system-code><IDm><PMm>`.
 
 ## KernelSU lifecycle
 
-The module stores user intent separately from runtime status, serializes enable and
-disable operations, injects at most once per observed HAL PID, and reinjects after
-the HAL restarts. Disabling restarts the HAL so no in-process hook remains. All
-commands have bounded waits and emit machine-readable status fields.
+The module stores user intent separately from runtime status, serializes injection,
+injects at most once per observed HAL PID, and reinjects after an external HAL
+restart. Enabling sets a runtime vendor property and loads the hook when needed;
+disabling clears that property so subsequent configurations pass through unchanged.
+The switch does not restart the HAL or NFC framework service. Commands emit
+machine-readable status fields.

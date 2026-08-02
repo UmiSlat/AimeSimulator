@@ -20,7 +20,7 @@ internal object PmmManager {
             val flag = if (enabled) "true" else "false"
             "setprop $LEGACY_ENABLED $flag; setprop ctl.restart nfc"
         }
-        val result = CommandRunner.shell(command, root = true, timeoutSeconds = 20)
+        val result = CommandRunner.shell(command, root = true, timeoutSeconds = 45)
         if (!result.succeeded) {
             return Snapshot(Status.ERROR, result.output.ifBlank { "Root command failed (${result.exitCode})" })
         }

@@ -21,13 +21,20 @@ internal class HceSession(private val context: Context) {
     }
 
     private val component = ComponentName(context, AimeHostService::class.java)
+    // Keep a known-good adapter across NFC service restarts. Calling isEnabled() on this
+    // instance activates Android's built-in dead-service recovery and refreshes the NFC-F
+    // Binder, while a fresh getDefaultAdapter() call can remain null through a cached
+    // NfcManager on some vendor builds.
+    private var adapter: NfcAdapter? = runCatching {
+        NfcAdapter.getDefaultAdapter(context)
+    }.getOrNull()
 
     fun activate(activity: Activity, profile: CardProfile, compatibilityMode: Boolean): Report {
         if (!context.packageManager.hasSystemFeature(PackageManager.FEATURE_NFC_HOST_CARD_EMULATION_NFCF)) {
             return report(Stage.UNSUPPORTED, "HCE-F is unavailable")
         }
-        val nfcAdapter = NfcAdapter.getDefaultAdapter(context)
-            ?: return report(Stage.UNSUPPORTED, "NFC is unavailable")
+        val nfcAdapter = resolveAdapter()
+            ?: return report(Stage.SERVICE_RESTARTING, "NFC service is restarting")
         try {
             if (!nfcAdapter.isEnabled) return report(Stage.NFC_DISABLED, "NFC is disabled")
         } catch (error: RuntimeException) {
@@ -63,8 +70,15 @@ internal class HceSession(private val context: Context) {
     }
 
     fun deactivate(activity: Activity) {
-        val nfcAdapter = NfcAdapter.getDefaultAdapter(context) ?: return
+        val nfcAdapter = resolveAdapter() ?: return
         runCatching { NfcFCardEmulation.getInstance(nfcAdapter).disableService(activity) }
+    }
+
+    private fun resolveAdapter(): NfcAdapter? {
+        adapter?.let { return it }
+        return runCatching { NfcAdapter.getDefaultAdapter(context) }.getOrNull()?.also {
+            adapter = it
+        }
     }
 
     private fun restore(store: CardStore, profileId: String?) {

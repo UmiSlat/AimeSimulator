@@ -41,7 +41,7 @@
     <string name="pmm_patch">PMm 兼容补丁</string>
     <string name="enable_pmm_patch">启用 PMm 补丁</string>
     <string name="checking_status">正在检查 Root 集成…</string>
-    <string name="pmm_explanation">Android 15 及以上版本使用随附的 KernelSU 模块；较早版本使用 Xposed 框架 Hook。切换补丁会重启 NFC。</string>
+    <string name="pmm_explanation">Android 15 及以上版本使用随附的 KernelSU 模块；较早版本使用 Xposed 框架 Hook。补丁开关会在运行时生效，不再重启 NFC。</string>
     <string name="pmm_mode_module">KernelSU 模块</string>
     <string name="pmm_mode_framework">Xposed 框架 Hook</string>
     <string name="pmm_status">%1$s：%2$s</string>

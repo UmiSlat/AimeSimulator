@@ -14,7 +14,8 @@ profile through Android's `HostNfcFService` API.
 - System light/dark theme selection and Material You dynamic colors.
 
 The Android 15/16 path is device-specific. It currently targets arm64 devices whose
-HAL process is named `android.hardware.nfc-service.st`.
+HAL process name starts with `android.hardware.nfc-service`, including the ST
+hyphenated and dotted variants.
 
 ## Build
 
@@ -44,6 +45,8 @@ module produced by `tools/package_module.py`.
 
 PMm state is written below `/data/adb/aimesim_pmm/`. The app reports `disabled`,
 `waiting`, `injecting`, `active`, or `error` based on the module response.
+The Android 15/16 module keeps its injected hook loaded and switches PMm rewriting
+at runtime, so toggling the patch does not restart the NFC HAL or framework service.
 
 See [docs/FUNCTIONAL_SPEC.md](docs/FUNCTIONAL_SPEC.md) for the behavior contract and
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for dependency provenance.

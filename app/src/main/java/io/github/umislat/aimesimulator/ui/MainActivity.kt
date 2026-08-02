@@ -316,7 +316,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val MENU_SETTINGS = 100
         private const val MENU_ABOUT = 101
-        private const val MAX_ACTIVATION_RETRIES = 8
-        private const val ACTIVATION_RETRY_DELAY_MS = 750L
+        private const val MAX_ACTIVATION_RETRIES = 30
+        private const val ACTIVATION_RETRY_DELAY_MS = 1_000L
     }
 }

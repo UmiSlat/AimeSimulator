@@ -28,6 +28,9 @@ struct mapping {
     char path[PATH_MAX];
 };
 
+#define GETSID_SYSCALL_NUMBER 156ULL
+#define GETSID_SVC_RETURN_OFFSET 12ULL
+
 static int read_mapping(pid_t pid, const char* contains, bool executable, struct mapping* output) {
     char mapsPath[64];
     snprintf(mapsPath, sizeof(mapsPath), "/proc/%d/maps", pid);
@@ -147,8 +150,15 @@ static int wait_for_stop(pid_t pid, int expectedSignal) {
         int status = 0;
         pid_t result = waitpid(pid, &status, __WALL | WNOHANG);
         if (result == pid) {
-            if (!WIFSTOPPED(status)) return -1;
-            return expectedSignal == 0 || WSTOPSIG(status) == expectedSignal ? 0 : -1;
+            if (!WIFSTOPPED(status)) {
+                errno = ESRCH;
+                return -1;
+            }
+            if (expectedSignal == 0 || WSTOPSIG(status) == expectedSignal) return 0;
+            fprintf(stderr, "unexpected stop signal=%d expected=%d\n",
+                    WSTOPSIG(status), expectedSignal);
+            errno = EINTR;
+            return -1;
         }
         if (result < 0) return -1;
         usleep(50000);
@@ -157,38 +167,92 @@ static int wait_for_stop(pid_t pid, int expectedSignal) {
     return -1;
 }
 
+static int ensure_tracee_stopped(pid_t pid, bool* forcedStop) {
+    *forcedStop = false;
+    struct user_pt_regs registers;
+    if (get_registers(pid, &registers) == 0) return 0;
+    if (kill(pid, SIGSTOP) != 0 || wait_for_stop(pid, 0) != 0) return -1;
+    *forcedStop = true;
+    return 0;
+}
+
 static int call_remote_dlopen(pid_t pid, uintptr_t function, uintptr_t caller,
+                              uintptr_t syscallSentinel,
                               const char* libraryPath, uintptr_t* handle) {
     struct user_pt_regs saved;
     if (get_registers(pid, &saved) != 0) return -1;
     struct user_pt_regs call = saved;
     uintptr_t remoteString = (saved.sp - strlen(libraryPath) - 32) & ~(uintptr_t)0xF;
 
-    errno = 0;
-    long originalInstruction = ptrace(PTRACE_PEEKDATA, pid, (void*)saved.pc, NULL);
-    if (originalInstruction == -1 && errno != 0) return -1;
-    long trapInstruction = originalInstruction;
-    const uint32_t brk = 0xD4200000;
-    memcpy(&trapInstruction, &brk, sizeof(brk));
-
-    if (write_remote(pid, remoteString, libraryPath, strlen(libraryPath) + 1) != 0 ||
-        ptrace(PTRACE_POKEDATA, pid, (void*)saved.pc, (void*)trapInstruction) != 0) return -1;
-
     call.regs[0] = remoteString;
     call.regs[1] = RTLD_NOW;
     call.regs[2] = caller;
     call.sp = remoteString;
     call.pc = function;
-    call.regs[30] = saved.pc;
+    call.regs[30] = syscallSentinel;
     int result = -1;
-    if (set_registers(pid, &call) == 0 && ptrace(PTRACE_CONT, pid, NULL, NULL) == 0 &&
-        wait_for_stop(pid, SIGTRAP) == 0 && get_registers(pid, &call) == 0) {
-        *handle = call.regs[0];
-        result = *handle == 0 ? -1 : 0;
+    bool mayBeRunning = false;
+    int observedStops = 0;
+    uintptr_t lastPc = 0;
+    unsigned long long lastSyscall = 0;
+    bool remoteCallStarted = false;
+    bool sentinelReached = false;
+    // PTRACE_ATTACH can stop a thread while its previous syscall is unwinding. Execute one
+    // linker instruction before syscall tracing so that return values cannot overwrite x0.
+    if (write_remote(pid, remoteString, libraryPath, strlen(libraryPath) + 1) == 0 &&
+        set_registers(pid, &call) == 0 && ptrace(PTRACE_SINGLESTEP, pid, NULL, NULL) == 0) {
+        mayBeRunning = true;
+        if (wait_for_stop(pid, SIGTRAP) == 0) {
+            mayBeRunning = false;
+            if (ptrace(PTRACE_SYSCALL, pid, NULL, NULL) == 0) {
+                mayBeRunning = true;
+                remoteCallStarted = true;
+            }
+        }
+    }
+    if (remoteCallStarted) {
+        for (int stop = 0; stop < 512; ++stop) {
+            if (wait_for_stop(pid, SIGTRAP | 0x80) != 0) break;
+            mayBeRunning = false;
+            if (get_registers(pid, &call) != 0) break;
+            ++observedStops;
+            lastPc = call.pc;
+            lastSyscall = call.regs[8];
+            // getsid is a read-only libc wrapper that is not part of the linker path. Its
+            // syscall-entry stop preserves dlopen's opaque handle in x0 without patching code.
+            if (call.pc == syscallSentinel + GETSID_SVC_RETURN_OFFSET &&
+                call.regs[8] == GETSID_SYSCALL_NUMBER) {
+                sentinelReached = true;
+                *handle = call.regs[0];
+                if (ptrace(PTRACE_SYSCALL, pid, NULL, NULL) == 0) {
+                    mayBeRunning = true;
+                    if (wait_for_stop(pid, SIGTRAP | 0x80) == 0) {
+                        mayBeRunning = false;
+                        result = *handle == 0 ? -1 : 0;
+                    }
+                }
+                break;
+            }
+            if (ptrace(PTRACE_SYSCALL, pid, NULL, NULL) != 0) break;
+            mayBeRunning = true;
+        }
+    }
+    if (!remoteCallStarted) {
+        fprintf(stderr, "cannot start remote syscall trace: %s\n", strerror(errno));
     }
 
-    ptrace(PTRACE_POKEDATA, pid, (void*)saved.pc, (void*)originalInstruction);
-    set_registers(pid, &saved);
+    bool forcedStop = false;
+    if (mayBeRunning && ensure_tracee_stopped(pid, &forcedStop) != 0) return -1;
+    if (set_registers(pid, &saved) != 0) result = -1;
+    if (forcedStop) kill(pid, SIGCONT);
+    if (result != 0) {
+        fprintf(stderr,
+                "remote dlopen trace failed: sentinel=%s stops=%d pc=0x%lx expected=0x%lx "
+                "syscall=%llu\n",
+                sentinelReached ? "reached" : "missing", observedStops, (unsigned long)lastPc,
+                (unsigned long)(syscallSentinel + GETSID_SVC_RETURN_OFFSET), lastSyscall);
+        fprintf(stderr, "remote handle=0x%lx\n", (unsigned long)*handle);
+    }
     return result;
 }
 
@@ -205,21 +269,36 @@ int main(int argc, char** argv) {
     char linkerPath[PATH_MAX] = {0};
     uintptr_t linkerBias = module_load_bias(pid, "/linker64", linkerPath);
     uintptr_t symbol = dynamic_symbol_value(linkerPath, "__loader_dlopen");
+    char libcPath[PATH_MAX] = {0};
+    uintptr_t libcBias = module_load_bias(pid, "/libc.so", libcPath);
+    uintptr_t sentinelSymbol = dynamic_symbol_value(libcPath, "getsid");
     struct mapping callerMapping;
-    if (linkerBias == 0 || symbol == 0 ||
+    if (linkerBias == 0 || symbol == 0 || libcBias == 0 || sentinelSymbol == 0 ||
         (read_mapping(pid, "/vendor/bin/hw/", true, &callerMapping) != 0 &&
          read_mapping(pid, NULL, true, &callerMapping) != 0)) {
         fprintf(stderr, "cannot resolve target linker or caller mapping\n");
         return 65;
     }
 
-    if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) != 0 || wait_for_stop(pid, SIGSTOP) != 0) {
+    if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) != 0) {
         fprintf(stderr, "ptrace attach failed: %s\n", strerror(errno));
+        return 66;
+    }
+    if (wait_for_stop(pid, SIGSTOP) != 0) {
+        int savedError = errno;
+        ptrace(PTRACE_DETACH, pid, NULL, NULL);
+        fprintf(stderr, "ptrace stop failed: %s\n", strerror(savedError));
+        return 66;
+    }
+    if (ptrace(PTRACE_SETOPTIONS, pid, NULL, (void*)PTRACE_O_TRACESYSGOOD) != 0) {
+        int savedError = errno;
+        ptrace(PTRACE_DETACH, pid, NULL, NULL);
+        fprintf(stderr, "cannot enable syscall tracing: %s\n", strerror(savedError));
         return 66;
     }
     uintptr_t handle = 0;
     int callStatus = call_remote_dlopen(pid, linkerBias + symbol, callerMapping.start + 4,
-                                        argv[2], &handle);
+                                        libcBias + sentinelSymbol, argv[2], &handle);
     ptrace(PTRACE_DETACH, pid, NULL, NULL);
     if (callStatus != 0) {
         fprintf(stderr, "remote dlopen failed\n");

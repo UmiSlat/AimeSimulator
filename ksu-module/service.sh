@@ -8,6 +8,7 @@ DISABLED_FILE=$STATE_DIR/disabled
 LOCK_DIR=$STATE_DIR/operation.lock
 INJECTOR=$MODDIR/bin/aimesim_injector
 LIBRARY=/vendor/lib64/libaimesim_pmm.so
+ENABLED_PROPERTY=vendor.aimesim.pmm.enabled
 
 mkdir -p "$STATE_DIR"
 chmod 0700 "$STATE_DIR"
@@ -27,7 +28,12 @@ status() {
 }
 
 find_hal() {
-  for name in android.hardware.nfc-service.st android.hardware.nfc-service.nxp android.hardware.nfc-service; do
+  for name in \
+    android.hardware.nfc-service-st \
+    android.hardware.nfc-service-nxp \
+    android.hardware.nfc-service.st \
+    android.hardware.nfc-service.nxp \
+    android.hardware.nfc-service; do
     pid=$(pidof "$name" 2>/dev/null)
     [ -n "$pid" ] && { printf '%s\n' "${pid%% *}"; return 0; }
   done
@@ -44,15 +50,11 @@ find_hal() {
   return 1
 }
 
-restart_nfc() {
-  for service in nfc_hal_service vendor.nfc_hal_service nfc; do
-    current=$(getprop "init.svc.$service")
-    if [ -n "$current" ]; then
-      setprop ctl.restart "$service"
-      return 0
-    fi
-  done
-  return 1
+set_patch_enabled() {
+  requested=$1
+  [ "$(getprop "$ENABLED_PROPERTY")" = "$requested" ] && return 0
+  setprop "$ENABLED_PROPERTY" "$requested" 2>/dev/null
+  [ "$(getprop "$ENABLED_PROPERTY")" = "$requested" ]
 }
 
 inject_once() {
@@ -92,8 +94,17 @@ monitor() {
   last_pid=
   while true; do
     if [ -f "$DISABLED_FILE" ]; then
-      record_state disabled "Patch disabled"
+      if set_patch_enabled 0; then
+        record_state disabled "Patch disabled"
+      else
+        record_state error "Could not update the runtime PMm switch"
+      fi
     else
+      if ! set_patch_enabled 1; then
+        record_state error "Could not update the runtime PMm switch"
+        sleep 5
+        continue
+      fi
       current_pid=$(find_hal 2>/dev/null)
       if [ -n "$current_pid" ] && { [ "$current_pid" != "$last_pid" ] ||
           ! grep -q 'libaimesim_pmm.so' "/proc/$current_pid/maps" 2>/dev/null; }; then
@@ -113,14 +124,20 @@ case "${1:-monitor}" in
     ;;
   enable)
     rm -f "$DISABLED_FILE"
+    if ! set_patch_enabled 1; then
+      record_state error "Could not enable the runtime PMm switch"
+      exit 1
+    fi
     record_state waiting "Enabled; waiting for the NFC HAL"
-    restart_nfc >/dev/null 2>&1
-    inject_once >/dev/null 2>&1 &
+    inject_once >/dev/null 2>&1 || true
     ;;
   disable)
+    if ! set_patch_enabled 0; then
+      record_state error "Could not disable the runtime PMm switch"
+      exit 1
+    fi
     : > "$DISABLED_FILE"
     record_state disabled "Patch disabled"
-    restart_nfc >/dev/null 2>&1
     ;;
   inject)
     inject_once
