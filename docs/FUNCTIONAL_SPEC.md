@@ -6,9 +6,12 @@ the structure of any earlier implementation.
 ## Card profiles
 
 A profile contains a stable identifier, a user-visible label, a 16-hex-digit IDm,
-and optional 16-byte SPAD0 and ID-block captures. Profiles and the selected profile
+an optional 20-digit printed Access Code, and optional 16-byte SPAD0 and ID-block captures. Profiles and the selected profile
 survive process restarts. Deleting or reordering profiles must not select a different
 profile accidentally.
+
+The printed Access Code is display-only local metadata. It is never inferred from
+NFC data and does not alter HCE-F registration or the emulated card image.
 
 Normal mode registers the profile IDm with Android. Compatibility mode registers
 `02FE001145141919` while retaining the profile IDm inside the emulated card image.

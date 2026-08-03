@@ -7,10 +7,13 @@ internal data class CardProfile(
     val label: String,
     val idm: String,
     val spad0: String? = null,
-    val idBlock: String? = null
+    val idBlock: String? = null,
+    val accessCode: String? = null
 ) {
     fun routedIdm(compatibilityMode: Boolean): String =
         if (compatibilityMode) COMPATIBILITY_IDM else idm
+
+    fun formattedAccessCode(): String? = accessCode?.chunked(4)?.joinToString(" ")
 
     companion object {
         const val DEFAULT_IDM = "02FE000000000000"
@@ -21,13 +24,26 @@ internal data class CardProfile(
             idm: String,
             spad0: String? = null,
             idBlock: String? = null,
+            accessCode: String? = null,
             profileId: String = UUID.randomUUID().toString()
         ): CardProfile? {
             val cleanIdm = HexCodec.normalize(idm, 8) ?: return null
             val cleanSpad0 = spad0?.let { HexCodec.normalize(it, 16) ?: return null }
             val cleanIdBlock = idBlock?.let { HexCodec.normalize(it, 16) ?: return null }
+            val cleanAccessCode = accessCode?.takeIf(String::isNotBlank)?.let { value ->
+                value.filterNot { it.isWhitespace() || it == '-' }
+                    .takeIf { it.length == 20 && it.all(Char::isDigit) }
+                    ?: return null
+            }
             val cleanLabel = label.trim().ifEmpty { "Card ${cleanIdm.takeLast(4)}" }
-            return CardProfile(profileId, cleanLabel, cleanIdm, cleanSpad0, cleanIdBlock)
+            return CardProfile(
+                profileId,
+                cleanLabel,
+                cleanIdm,
+                cleanSpad0,
+                cleanIdBlock,
+                cleanAccessCode
+            )
         }
 
         fun fallback(): CardProfile = CardProfile(

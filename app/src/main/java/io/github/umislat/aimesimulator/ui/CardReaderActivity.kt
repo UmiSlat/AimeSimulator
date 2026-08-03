@@ -24,6 +24,7 @@ class CardReaderActivity : AppCompatActivity(), NfcAdapter.ReaderCallback {
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         root.addView(MaterialToolbar(this).apply {
             title = getString(R.string.read_physical_card)
+            setTitleTextAppearance(this@CardReaderActivity, R.style.TextAppearance_AimeSimulator_Toolbar)
             setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material)
             setNavigationOnClickListener { finish() }
         })

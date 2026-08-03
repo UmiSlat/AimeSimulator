@@ -58,6 +58,12 @@ internal class CardStore(context: Context) {
         preferences.edit().putBoolean(KEY_SHOW_IDM, enabled).apply()
     }
 
+    fun showAccessCode(): Boolean = preferences.getBoolean(KEY_SHOW_ACCESS_CODE, true)
+
+    fun setShowAccessCode(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_SHOW_ACCESS_CODE, enabled).apply()
+    }
+
     fun recordHceStatus(message: String) {
         preferences.edit().putString(KEY_HCE_STATUS, message).apply()
     }
@@ -76,6 +82,7 @@ internal class CardStore(context: Context) {
                 put("idm", profile.idm)
                 profile.spad0?.let { put("spad0", it) }
                 profile.idBlock?.let { put("idBlock", it) }
+                profile.accessCode?.let { put("accessCode", it) }
             })
         }
         return array.toString()
@@ -93,6 +100,7 @@ internal class CardStore(context: Context) {
                         idm = item.optString("idm"),
                         spad0 = item.optNullableString("spad0"),
                         idBlock = item.optNullableString("idBlock"),
+                        accessCode = item.optNullableString("accessCode"),
                         profileId = item.optString("id").ifBlank { java.util.UUID.randomUUID().toString() }
                     )?.let(::add)
                 }
@@ -116,6 +124,7 @@ internal class CardStore(context: Context) {
                         idm = item.optString("idm"),
                         spad0 = item.optNullableString("spad0"),
                         idBlock = item.optNullableString("felicaLiteIdBlock"),
+                        accessCode = item.optNullableString("accessCode"),
                         profileId = item.optString("key").ifBlank { java.util.UUID.randomUUID().toString() }
                     )?.let(imported::add)
                 }
@@ -140,6 +149,7 @@ internal class CardStore(context: Context) {
         private const val KEY_SELECTED = "selected_profile"
         private const val KEY_COMPATIBILITY = "compatibility_mode"
         private const val KEY_SHOW_IDM = "show_idm"
+        private const val KEY_SHOW_ACCESS_CODE = "show_access_code"
         private const val KEY_HCE_STATUS = "last_hce_status"
         private const val KEY_MIGRATION_DONE = "storage_migrated"
     }
