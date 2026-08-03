@@ -49,7 +49,7 @@
     <string name="pmm_patch">PMm compatibility patch</string>
     <string name="enable_pmm_patch">Enable PMm patch</string>
     <string name="checking_status">Checking root integration…</string>
-    <string name="pmm_explanation">Android 15 and later require the bundled KernelSU module. Earlier Android releases use the Xposed framework hook. The patch switch is applied at runtime without restarting NFC.</string>
+    <string name="pmm_explanation">The APK declares the compatible PMm through Android HCE-F. Enable this fallback patch only when the device ignores or replaces that value. Android 15 and later use the bundled KernelSU module; earlier releases use the Xposed framework hook.</string>
     <string name="pmm_mode_module">KernelSU module</string>
     <string name="pmm_mode_framework">Xposed framework hook</string>
     <string name="pmm_status">%1$s: %2$s</string>

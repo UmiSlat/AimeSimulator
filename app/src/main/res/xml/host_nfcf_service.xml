@@ -3,4 +3,5 @@
     android:description="@string/hcef_service_description">
     <system-code-filter android:name="4000" />
     <nfcid2-filter android:name="02FE000000000000" />
+    <t3tPmm-filter android:name="00F1000000014300" />
 </host-nfcf-service>

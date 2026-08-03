@@ -12,7 +12,9 @@ profile accidentally.
 
 Normal mode registers the profile IDm with Android. Compatibility mode registers
 `02FE001145141919` while retaining the profile IDm inside the emulated card image.
-The system code is `88B4` and the advertised PMm is `00F1000000014300`.
+The system code is `88B4`. The HCE-F service metadata statically declares the
+advertised PMm as `00F1000000014300`; supported Android NFC stacks use this value
+without a native PMm hook.
 
 ## HCE-F protocol
 
@@ -56,6 +58,8 @@ the NFC application loads `libpmm.so` only when the legacy PMm property is enabl
 The native hook replaces PMm with `00 F1 00 00 00 01 43 00`. Legacy systems hook
 `nfa_dm_check_set_config`. The ST HAL path modifies only CORE_SET_CONFIG parameters
 encoded as `51 08 <PMm>` or `40 12 <system-code><IDm><PMm>`.
+These hooks are compatibility fallbacks for vendor stacks that ignore or replace
+the standard HCE-F `t3tPmm-filter`, rather than a requirement of the card image.
 
 ## KernelSU lifecycle
 

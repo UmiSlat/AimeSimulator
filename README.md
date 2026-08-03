@@ -15,6 +15,7 @@ AimeSimulator 是一个面向 Android 的 NFC-F / FeliCa Lite 卡片配置管理
 - 提供正常模式与兼容模式两种 NFCID2 路由方式。
 - 进入应用时检查系统默认 NFC 支付应用；如果尚未选择本应用，则打开 Android 的系统确认界面。
 - 响应 FeliCa Lite 的 Read Without Encryption 请求。
+- 通过标准 HCE-F `t3tPmm-filter` 声明 PMm `00F1000000014300`，兼容的系统无需 Hook。
 - 提供 PMm 兼容补丁：
   - Android 14 及以下：通过 libxposed API 101 和应用内原生 Hook 工作；
   - Android 15 及以上：通过独立 KernelSU 模块注入 NFC HAL。
@@ -31,14 +32,14 @@ AimeSimulator 是一个面向 Android 的 NFC-F / FeliCa Lite 卡片配置管理
 - 设备必须具有 NFC，并由系统声明支持 NFC-F 主机卡模拟（HCE-F）。
 - 使用模拟时需要保持 NFC 开启，并让 AimeSimulator 位于前台。
 
-仅安装 APK 就可以管理配置并尝试使用系统原生 HCE-F。若设备限制自定义 NFCID2，或需要 PMm 兼容值，还需要下方对应的 Hook/Root 环境。
+仅安装 APK 就可以管理配置，并通过系统原生 HCE-F 声明 NFCID2、System Code 和 PMm。若设备限制自定义 NFCID2，或厂商 NFC 栈忽略/替换标准 PMm，才需要下方对应的 Hook/Root 环境。
 
 ### 兼容性组件
 
 | 系统版本 | LSPosed API 101 | Root | KernelSU 模块 | PMm 实现 |
 | --- | --- | --- | --- | --- |
-| Android 10–14 | 建议启用 | 切换 PMm 时需要 | 不需要 | 在 `com.android.nfc` 中加载 `libpmm.so` |
-| Android 15–16 | 建议启用 | 需要 | 需要 | 向厂商 NFC HAL 注入 `libaimesim_pmm.so` |
+| Android 10–14 | 按需启用 | 使用 PMm 兜底补丁时需要 | 不需要 | 标准 HCE-F PMm；异常设备可在 `com.android.nfc` 中加载 `libpmm.so` |
+| Android 15–16 | 按需启用 | 使用 PMm 兜底补丁时需要 | 异常设备需要 | 标准 HCE-F PMm；异常设备可向厂商 NFC HAL 注入 `libaimesim_pmm.so` |
 
 LSPosed 模块的静态作用域只有 `com.android.nfc`。不需要、也不应勾选“系统框架”。它负责放宽 NFCID2 / System Code 的格式校验，并为 Android 14 及以下系统加载旧版 PMm Hook。
 
@@ -69,9 +70,9 @@ io.github.umislat.aimesimulator
 4. 不要选择系统框架。
 5. 重启设备，或按照所用框架的要求重新加载 NFC 进程。
 
-如果只使用兼容模式且系统原生允许注册固定 NFCID2，部分设备可能无需 LSPosed；但这不代表 PMm 兼容补丁也能在没有对应组件时工作。
+如果系统原生接受所用 NFCID2，并正确采用 APK 中的 `t3tPmm-filter`，可以不启用 LSPosed 或 PMm 补丁。是否需要兜底组件应以实际读卡结果为准。
 
-### 3A. Android 14 及以下的 PMm 补丁
+### 3A. Android 14 及以下的 PMm 兜底补丁（按需）
 
 1. 完成 APK 和 LSPosed 配置。
 2. 打开 AimeSimulator，进入“设置”。
@@ -80,7 +81,7 @@ io.github.umislat.aimesimulator
 
 因此 Android 14 及以下切换 PMm 时，NFC 会短暂不可用；应用会等待 NFC Binder 恢复并重试 HCE-F 注册。
 
-### 3B. Android 15 及以上的 PMm 补丁
+### 3B. Android 15 及以上的 PMm 兜底补丁（按需）
 
 1. 在 KernelSU 管理器中安装 `aimesim-pmm-ksu-v3.zip`。
 2. 安装完成后重启一次设备。模块首次安装时默认保持关闭。
@@ -159,6 +160,8 @@ io.github.umislat.aimesimulator
 | FeliCa Lite 只读服务 | `000B`（数据包中按小端序编码） |
 | PMm 兼容值 | `00F1000000014300` |
 | 兼容模式 NFCID2 | `02FE001145141919` |
+
+PMm 通过 `host_nfcf_service.xml` 中的标准 `<t3tPmm-filter>` 静态声明。未声明该字段时，Android 默认使用 `FFFFFFFFFFFFFFFF`；本项目的 Root/Hook 补丁只负责兼容会忽略或覆盖标准声明的厂商 NFC 栈。
 
 HCE-F 服务会：
 

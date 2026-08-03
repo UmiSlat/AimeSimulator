@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import zipfile
+import xml.etree.ElementTree as ElementTree
 from pathlib import Path
 
 from module_layout import REQUIRED_ARCH_FILES, REQUIRED_SOURCE_FILES
@@ -8,6 +9,8 @@ from module_layout import REQUIRED_ARCH_FILES, REQUIRED_SOURCE_FILES
 ROOT = Path(__file__).resolve().parents[1]
 APK = ROOT / "app" / "build" / "outputs" / "apk" / "debug" / "app-debug.apk"
 MODULE = ROOT / "dist" / "aimesim-pmm-ksu-v3.zip"
+HCEF_SERVICE = ROOT / "app" / "src" / "main" / "res" / "xml" / "host_nfcf_service.xml"
+ANDROID_NAMESPACE = "{http://schemas.android.com/apk/res/android}"
 
 
 def require_archive(path: Path, entries: set[str]) -> None:
@@ -21,6 +24,10 @@ def require_archive(path: Path, entries: set[str]) -> None:
 
 
 def main() -> None:
+    hcef = ElementTree.parse(HCEF_SERVICE).getroot()
+    pmm = hcef.find("t3tPmm-filter")
+    if pmm is None or pmm.get(f"{ANDROID_NAMESPACE}name") != "00F1000000014300":
+        raise SystemExit("HCE-F metadata does not declare the compatibility PMm")
     require_archive(APK, {
         "AndroidManifest.xml",
         "META-INF/xposed/java_init.list",
