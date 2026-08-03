@@ -37,6 +37,14 @@
     <string name="hold_card_near_phone">Hold the physical FeliCa card near the NFC antenna.</string>
     <string name="card_read_failed">The card was detected, but its profile could not be read. Try again without moving it.</string>
     <string name="privacy">Privacy</string>
+    <string name="appearance">Appearance</string>
+    <string name="theme_mode">Theme</string>
+    <string name="theme_follow_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="dynamic_colors">Use dynamic colors</string>
+    <string name="dynamic_colors_summary">Use Material You colors generated from the system wallpaper.</string>
+    <string name="dynamic_colors_unavailable">Dynamic colors require Android 12 or later.</string>
     <string name="show_idm">Show card IDm values</string>
     <string name="pmm_patch">PMm compatibility patch</string>
     <string name="enable_pmm_patch">Enable PMm patch</string>
@@ -48,5 +56,6 @@
     <string name="state_active">Active</string>
     <string name="state_inactive">Inactive</string>
     <string name="hcef_service_description">Aime FeliCa profile service</string>
+    <string name="default_nfc_service_description">AimeSimulator default NFC app helper</string>
     <string name="xposed_description">Allows dynamic NFC-F identifiers and applies the optional PMm compatibility value.</string>
 </resources>

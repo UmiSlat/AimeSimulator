@@ -10,8 +10,8 @@ android {
         applicationId 'io.github.umislat.aimesimulator'
         minSdk 29
         targetSdk 34
-        versionCode 16
-        versionName '2.1.6'
+        versionCode 18
+        versionName '2.1.8'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
 
         externalNativeBuild {

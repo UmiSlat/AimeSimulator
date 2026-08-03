@@ -37,6 +37,14 @@
     <string name="hold_card_near_phone">请将实体 FeliCa 卡贴近手机的 NFC 天线位置。</string>
     <string name="card_read_failed">已检测到卡片，但无法读取配置。请保持卡片不动后重试。</string>
     <string name="privacy">隐私</string>
+    <string name="appearance">外观</string>
+    <string name="theme_mode">主题模式</string>
+    <string name="theme_follow_system">跟随系统</string>
+    <string name="theme_light">浅色</string>
+    <string name="theme_dark">深色</string>
+    <string name="dynamic_colors">使用动态取色</string>
+    <string name="dynamic_colors_summary">使用系统根据壁纸生成的 Material You 配色。</string>
+    <string name="dynamic_colors_unavailable">动态取色需要 Android 12 或更高版本。</string>
     <string name="show_idm">显示卡片 IDm</string>
     <string name="pmm_patch">PMm 兼容补丁</string>
     <string name="enable_pmm_patch">启用 PMm 补丁</string>
@@ -48,5 +56,6 @@
     <string name="state_active">已启用</string>
     <string name="state_inactive">未启用</string>
     <string name="hcef_service_description">Aime FeliCa 配置服务</string>
+    <string name="default_nfc_service_description">AimeSimulator 默认 NFC 应用辅助服务</string>
     <string name="xposed_description">允许动态 NFC-F 标识符，并可应用 PMm 兼容值。</string>
 </resources>

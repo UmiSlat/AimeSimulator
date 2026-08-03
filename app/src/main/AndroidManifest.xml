@@ -50,5 +50,17 @@
                 android:name="android.nfc.cardemulation.host_nfcf_service"
                 android:resource="@xml/host_nfcf_service" />
         </service>
+
+        <service
+            android:name=".nfc.DefaultNfcService"
+            android:exported="true"
+            android:permission="android.permission.BIND_NFC_SERVICE">
+            <intent-filter>
+                <action android:name="android.nfc.cardemulation.action.HOST_APDU_SERVICE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.nfc.cardemulation.host_apdu_service"
+                android:resource="@xml/host_apdu_service" />
+        </service>
     </application>
 </manifest>

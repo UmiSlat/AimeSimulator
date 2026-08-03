@@ -23,6 +23,7 @@ import com.google.android.material.snackbar.Snackbar
 import io.github.umislat.aimesimulator.R
 import io.github.umislat.aimesimulator.data.CardProfile
 import io.github.umislat.aimesimulator.data.CardStore
+import io.github.umislat.aimesimulator.nfc.DefaultNfcAppChecker
 import io.github.umislat.aimesimulator.nfc.HceSession
 
 class MainActivity : AppCompatActivity() {
@@ -33,6 +34,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var statusView: TextView
     private lateinit var modeSwitch: MaterialSwitch
     private var foreground = false
+    private var defaultNfcAppChecked = false
     private var activationRetry: Runnable? = null
 
     private val reader = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -60,6 +62,7 @@ class MainActivity : AppCompatActivity() {
         foreground = true
         renderProfiles()
         activateSelected()
+        checkDefaultNfcApp()
     }
 
     override fun onPause() {
@@ -232,6 +235,14 @@ class MainActivity : AppCompatActivity() {
             activationRetry = null
             if (foreground) activateSelected(attempt)
         }.also { statusView.postDelayed(it, ACTIVATION_RETRY_DELAY_MS) }
+    }
+
+    private fun checkDefaultNfcApp() {
+        if (defaultNfcAppChecked) return
+        when (DefaultNfcAppChecker.checkAndRequest(this)) {
+            DefaultNfcAppChecker.Result.NFC_NOT_READY -> Unit
+            else -> defaultNfcAppChecked = true
+        }
     }
 
     private fun cancelActivationRetry() {
