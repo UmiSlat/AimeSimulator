@@ -60,8 +60,10 @@ class MainActivity : AppCompatActivity() {
     private var cardPageStatusView: TextView? = null
     private var statusPageStatusView: TextView? = null
     private var lastHceReport: HceSession.Report? = null
+    private var genericDiagnosticReport: HceSession.Report? = null
     private var rootlessStatusView: TextView? = null
     private var rootlessDetailView: TextView? = null
+    private var genericDiagnosticStatusView: TextView? = null
 
     private var pmmSnapshot: PmmManager.Snapshot? = null
     private var pmmSwitch: MaterialSwitch? = null
@@ -157,6 +159,7 @@ class MainActivity : AppCompatActivity() {
         statusPageStatusView = null
         rootlessStatusView = null
         rootlessDetailView = null
+        genericDiagnosticStatusView = null
         pmmSwitch = null
         pmmStatus = null
         pmmProgress = null
@@ -399,17 +402,31 @@ class MainActivity : AppCompatActivity() {
             rootlessDetailView = TextView(this@MainActivity).apply {
                 textSize = 13f
                 alpha = 0.76f
-                setPadding(0, dp(6), 0, dp(10))
+                setPadding(0, dp(6), 0, dp(8))
             }
             addView(rootlessDetailView)
+            genericDiagnosticStatusView = TextView(this@MainActivity).apply {
+                textSize = 13f
+                alpha = 0.76f
+                setPadding(0, dp(4), 0, dp(10))
+            }
+            addView(genericDiagnosticStatusView)
             addView(MaterialButton(
                 this@MainActivity,
                 null,
                 com.google.android.material.R.attr.materialButtonOutlinedStyle
             ).apply {
-                setText(R.string.rootless_check_again)
+                setText(R.string.rootless_check_88b4)
                 setOnClickListener { activateSelected() }
-            }, LinearLayout.LayoutParams(-2, -2).apply { gravity = Gravity.END })
+            }, LinearLayout.LayoutParams(-1, -2))
+            addView(MaterialButton(
+                this@MainActivity,
+                null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle
+            ).apply {
+                setText(R.string.rootless_test_4000)
+                setOnClickListener { activateGenericDiagnostic() }
+            }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6) })
         })
     }
 
@@ -686,6 +703,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun activateSelected(attempt: Int = 0) {
         cancelActivationRetry()
+        genericDiagnosticReport = null
         val selected = store.selectedProfile()
         if (selected == null) {
             lastHceReport = null
@@ -712,6 +730,29 @@ class MainActivity : AppCompatActivity() {
         }
         setHceStatus(message)
         renderRootlessAssessment()
+    }
+
+    private fun activateGenericDiagnostic() {
+        cancelActivationRetry()
+        val selected = store.selectedProfile()
+        if (selected == null) {
+            genericDiagnosticReport = null
+            setHceStatus(getString(R.string.select_or_add_card))
+            renderGenericDiagnostic()
+            return
+        }
+        val report = session.activate(
+            this,
+            selected,
+            compatibilityMode = true,
+            systemCode = HceSession.GENERIC_SYSTEM_CODE
+        )
+        genericDiagnosticReport = report
+        setHceStatus(
+            if (report.succeeded) getString(R.string.generic_hcef_active)
+            else getString(R.string.generic_hcef_failed, report.detail)
+        )
+        renderGenericDiagnostic()
     }
 
     private fun setHceStatus(message: CharSequence) {
@@ -760,6 +801,29 @@ class MainActivity : AppCompatActivity() {
             getString(detail, assessment.detail.ifBlank { getString(R.string.rootless_unknown_error) })
         } else {
             getString(detail)
+        }
+        renderGenericDiagnostic()
+    }
+
+    private fun renderGenericDiagnostic() {
+        val report = genericDiagnosticReport
+        genericDiagnosticStatusView?.text = when (report?.stage) {
+            null -> getString(R.string.generic_hcef_idle)
+            HceSession.Stage.READY -> getString(
+                R.string.generic_hcef_ready,
+                CardProfile.COMPATIBILITY_IDM.chunked(4).joinToString(" "),
+                STANDARD_PMM_DISPLAY
+            )
+            HceSession.Stage.UNSUPPORTED -> getString(R.string.rootless_unsupported_detail)
+            HceSession.Stage.NFC_DISABLED -> getString(R.string.rootless_nfc_disabled_detail)
+            HceSession.Stage.SERVICE_RESTARTING -> getString(R.string.rootless_checking_detail)
+            HceSession.Stage.ID -> getString(R.string.generic_hcef_id_rejected)
+            HceSession.Stage.SYSTEM_CODE -> getString(R.string.generic_hcef_system_code_rejected)
+            HceSession.Stage.ENABLE -> getString(R.string.generic_hcef_enable_failed)
+            HceSession.Stage.EXCEPTION -> getString(
+                R.string.generic_hcef_failed,
+                report.detail.ifBlank { getString(R.string.rootless_unknown_error) }
+            )
         }
     }
 

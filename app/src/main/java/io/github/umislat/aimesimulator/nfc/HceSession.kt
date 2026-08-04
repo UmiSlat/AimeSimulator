@@ -29,7 +29,12 @@ internal class HceSession(private val context: Context) {
         NfcAdapter.getDefaultAdapter(context)
     }.getOrNull()
 
-    fun activate(activity: Activity, profile: CardProfile, compatibilityMode: Boolean): Report {
+    fun activate(
+        activity: Activity,
+        profile: CardProfile,
+        compatibilityMode: Boolean,
+        systemCode: String = SYSTEM_CODE
+    ): Report {
         if (!context.packageManager.hasSystemFeature(PackageManager.FEATURE_NFC_HOST_CARD_EMULATION_NFCF)) {
             return report(Stage.UNSUPPORTED, "HCE-F is unavailable")
         }
@@ -52,10 +57,10 @@ internal class HceSession(private val context: Context) {
                 restore(store, previousId)
                 return report(Stage.ID, "NFCID2 registration failed")
             }
-            if (!manager.registerSystemCodeForService(component, SYSTEM_CODE)) {
+            if (!manager.registerSystemCodeForService(component, systemCode)) {
                 manager.disableService(activity)
                 restore(store, previousId)
-                return report(Stage.SYSTEM_CODE, "System-code registration failed")
+                return report(Stage.SYSTEM_CODE, "System-code $systemCode registration failed")
             }
             if (!manager.enableService(activity, component)) {
                 manager.disableService(activity)
@@ -114,5 +119,6 @@ internal class HceSession(private val context: Context) {
     companion object {
         private const val TAG = "AimeHceSession"
         const val SYSTEM_CODE = "88B4"
+        const val GENERIC_SYSTEM_CODE = "4000"
     }
 }
