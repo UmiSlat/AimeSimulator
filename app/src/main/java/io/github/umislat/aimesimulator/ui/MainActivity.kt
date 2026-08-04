@@ -41,6 +41,7 @@ import io.github.umislat.aimesimulator.data.CardProfile
 import io.github.umislat.aimesimulator.data.CardStore
 import io.github.umislat.aimesimulator.nfc.DefaultNfcAppChecker
 import io.github.umislat.aimesimulator.nfc.HceSession
+import io.github.umislat.aimesimulator.nfc.RootlessAssessment
 import io.github.umislat.aimesimulator.root.PmmManager
 
 class MainActivity : AppCompatActivity() {
@@ -58,6 +59,9 @@ class MainActivity : AppCompatActivity() {
     private var hceStatusText: CharSequence = ""
     private var cardPageStatusView: TextView? = null
     private var statusPageStatusView: TextView? = null
+    private var lastHceReport: HceSession.Report? = null
+    private var rootlessStatusView: TextView? = null
+    private var rootlessDetailView: TextView? = null
 
     private var pmmSnapshot: PmmManager.Snapshot? = null
     private var pmmSwitch: MaterialSwitch? = null
@@ -151,6 +155,8 @@ class MainActivity : AppCompatActivity() {
         selectedTab = tab
         cardPageStatusView = null
         statusPageStatusView = null
+        rootlessStatusView = null
+        rootlessDetailView = null
         pmmSwitch = null
         pmmStatus = null
         pmmProgress = null
@@ -172,6 +178,7 @@ class MainActivity : AppCompatActivity() {
         )
         updateHceStatusViews()
         if (tab == TAB_STATUS) {
+            renderRootlessAssessment()
             pmmSnapshot?.let(::renderPmm)
             if (refreshPmm) refreshPmm()
         }
@@ -368,12 +375,42 @@ class MainActivity : AppCompatActivity() {
             setPadding(0, 0, 0, dp(8))
         })
 
+        content.addView(sectionTitle(R.string.rootless_check))
+        content.addView(rootlessCard())
         content.addView(sectionTitle(R.string.current_profile))
         content.addView(currentProfileCard())
         content.addView(sectionTitle(R.string.pmm_patch))
         content.addView(pmmCard())
         scroll.addView(content)
         return scroll
+    }
+
+    private fun rootlessCard(): MaterialCardView = MaterialCardView(this).apply {
+        radius = dp(20).toFloat()
+        strokeWidth = dp(1)
+        addView(LinearLayout(this@MainActivity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(16), dp(18), dp(14))
+            rootlessStatusView = TextView(this@MainActivity).apply {
+                textSize = 17f
+                setTypeface(typeface, Typeface.BOLD)
+            }
+            addView(rootlessStatusView)
+            rootlessDetailView = TextView(this@MainActivity).apply {
+                textSize = 13f
+                alpha = 0.76f
+                setPadding(0, dp(6), 0, dp(10))
+            }
+            addView(rootlessDetailView)
+            addView(MaterialButton(
+                this@MainActivity,
+                null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle
+            ).apply {
+                setText(R.string.rootless_check_again)
+                setOnClickListener { activateSelected() }
+            }, LinearLayout.LayoutParams(-2, -2).apply { gravity = Gravity.END })
+        })
     }
 
     private fun currentProfileCard(): MaterialCardView = MaterialCardView(this).apply {
@@ -651,10 +688,13 @@ class MainActivity : AppCompatActivity() {
         cancelActivationRetry()
         val selected = store.selectedProfile()
         if (selected == null) {
+            lastHceReport = null
             setHceStatus(getString(R.string.select_or_add_card))
+            renderRootlessAssessment()
             return
         }
         val report = session.activate(this, selected, store.compatibilityMode())
+        lastHceReport = report
         val message = when (report.stage) {
             HceSession.Stage.READY -> getString(R.string.hce_ready, selected.label)
             HceSession.Stage.UNSUPPORTED -> getString(R.string.hce_unsupported)
@@ -665,9 +705,13 @@ class MainActivity : AppCompatActivity() {
                     getString(R.string.hce_waiting_for_service)
                 } else getString(R.string.hce_service_restart_timeout)
             }
-            else -> getString(R.string.hce_failed, report.detail)
+            HceSession.Stage.ID -> getString(R.string.hce_nfcid2_rejected)
+            HceSession.Stage.SYSTEM_CODE -> getString(R.string.hce_system_code_rejected)
+            HceSession.Stage.ENABLE -> getString(R.string.hce_enable_failed)
+            HceSession.Stage.EXCEPTION -> getString(R.string.hce_failed, report.detail)
         }
         setHceStatus(message)
+        renderRootlessAssessment()
     }
 
     private fun setHceStatus(message: CharSequence) {
@@ -678,6 +722,45 @@ class MainActivity : AppCompatActivity() {
     private fun updateHceStatusViews() {
         cardPageStatusView?.text = hceStatusText
         statusPageStatusView?.text = hceStatusText
+    }
+
+    private fun renderRootlessAssessment() {
+        val assessment = RootlessAssessment.from(
+            lastHceReport,
+            store.compatibilityMode(),
+            store.selectedProfile() != null
+        )
+        val (title, detail) = when (assessment.outcome) {
+            RootlessAssessment.Outcome.PROFILE_REQUIRED ->
+                R.string.rootless_profile_required_title to R.string.rootless_profile_required_detail
+            RootlessAssessment.Outcome.REGISTRATION_ACCEPTED -> if (assessment.compatibilityMode) {
+                R.string.rootless_accepted_title to R.string.rootless_accepted_compatibility_detail
+            } else {
+                R.string.rootless_accepted_title to R.string.rootless_accepted_normal_detail
+            }
+            RootlessAssessment.Outcome.UNSUPPORTED ->
+                R.string.rootless_unsupported_title to R.string.rootless_unsupported_detail
+            RootlessAssessment.Outcome.NFC_DISABLED ->
+                R.string.rootless_nfc_disabled_title to R.string.rootless_nfc_disabled_detail
+            RootlessAssessment.Outcome.SERVICE_RESTARTING ->
+                R.string.rootless_checking_title to R.string.rootless_checking_detail
+            RootlessAssessment.Outcome.DYNAMIC_ID_REJECTED ->
+                R.string.rootless_dynamic_id_title to R.string.rootless_dynamic_id_detail
+            RootlessAssessment.Outcome.COMPATIBILITY_ID_REJECTED ->
+                R.string.rootless_compatibility_id_title to R.string.rootless_compatibility_id_detail
+            RootlessAssessment.Outcome.SYSTEM_CODE_REJECTED ->
+                R.string.rootless_system_code_title to R.string.rootless_system_code_detail
+            RootlessAssessment.Outcome.ENABLE_FAILED ->
+                R.string.rootless_enable_title to R.string.rootless_enable_detail
+            RootlessAssessment.Outcome.ERROR ->
+                R.string.rootless_error_title to R.string.rootless_error_detail
+        }
+        rootlessStatusView?.setText(title)
+        rootlessDetailView?.text = if (assessment.outcome == RootlessAssessment.Outcome.ERROR) {
+            getString(detail, assessment.detail.ifBlank { getString(R.string.rootless_unknown_error) })
+        } else {
+            getString(detail)
+        }
     }
 
     private fun scheduleActivationRetry(attempt: Int) {
