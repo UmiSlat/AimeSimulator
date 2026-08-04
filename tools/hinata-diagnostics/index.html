@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>HINATA FeliCa 诊断</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">AimeSimulator / Rootless Diagnostics</p>
+        <h1>HINATA FeliCa 诊断</h1>
+      </div>
+      <div class="header-actions">
+        <button id="export-button" class="button secondary" type="button">导出记录</button>
+        <button id="connect-button" class="button primary" type="button">连接 HINATA</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="status-band" aria-label="连接状态">
+        <div class="status-item">
+          <span class="status-label">浏览器</span>
+          <strong id="browser-support" class="status-value">检测中</strong>
+        </div>
+        <div class="status-item">
+          <span class="status-label">设备</span>
+          <strong id="connection-state" class="status-value" data-state="disconnected">未连接</strong>
+        </div>
+        <div class="status-item device-item">
+          <span class="status-label">端点</span>
+          <strong id="device-name" class="status-value">未选择设备</strong>
+        </div>
+      </section>
+
+      <section class="command-bar" aria-label="诊断命令">
+        <button id="run-button" class="button primary run-button" type="button">运行完整诊断</button>
+        <div class="custom-probe">
+          <label for="custom-code">自定义 System Code</label>
+          <input
+            id="custom-code"
+            type="text"
+            value="88B4"
+            maxlength="4"
+            inputmode="text"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button id="custom-run-button" class="button secondary" type="button">轮询</button>
+        </div>
+        <output id="custom-result" class="custom-result">-</output>
+      </section>
+
+      <section class="verdict-band" aria-live="polite">
+        <div>
+          <span class="status-label">结论</span>
+          <h2 id="verdict" data-state="none">等待诊断</h2>
+        </div>
+        <p id="verdict-detail">尚未获得可判定的 FeliCa 响应。</p>
+      </section>
+
+      <section class="results-section" aria-labelledby="results-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">212 kbps / Request Code 01</p>
+            <h2 id="results-heading">轮询结果</h2>
+          </div>
+        </div>
+
+        <div class="probe-grid">
+          <article class="probe-card" data-probe="FFFF">
+            <header>
+              <div><span class="probe-code">FFFF</span><h3>通配轮询</h3></div>
+              <span class="probe-status" data-state="idle">未检测</span>
+            </header>
+            <dl>
+              <div><dt>IDm</dt><dd data-field="idm">-</dd></div>
+              <div><dt>PMm</dt><dd data-field="pmm">-</dd></div>
+              <div><dt>返回 System Code</dt><dd data-field="systems">-</dd></div>
+              <div><dt>块 00</dt><dd data-field="block0">-</dd></div>
+              <div><dt>块 82</dt><dd data-field="block82">-</dd></div>
+              <div><dt>状态</dt><dd data-field="detail">-</dd></div>
+            </dl>
+          </article>
+
+          <article class="probe-card" data-probe="88B4">
+            <header>
+              <div><span class="probe-code aime">88B4</span><h3>Aime 定向轮询</h3></div>
+              <span class="probe-status" data-state="idle">未检测</span>
+            </header>
+            <dl>
+              <div><dt>IDm</dt><dd data-field="idm">-</dd></div>
+              <div><dt>PMm</dt><dd data-field="pmm">-</dd></div>
+              <div><dt>返回 System Code</dt><dd data-field="systems">-</dd></div>
+              <div><dt>块 00</dt><dd data-field="block0">-</dd></div>
+              <div><dt>块 82</dt><dd data-field="block82">-</dd></div>
+              <div><dt>状态</dt><dd data-field="detail">-</dd></div>
+            </dl>
+          </article>
+
+          <article class="probe-card" data-probe="4000">
+            <header>
+              <div><span class="probe-code generic">4000</span><h3>Android 通用轮询</h3></div>
+              <span class="probe-status" data-state="idle">未检测</span>
+            </header>
+            <dl>
+              <div><dt>IDm</dt><dd data-field="idm">-</dd></div>
+              <div><dt>PMm</dt><dd data-field="pmm">-</dd></div>
+              <div><dt>返回 System Code</dt><dd data-field="systems">-</dd></div>
+              <div><dt>块 00</dt><dd data-field="block0">-</dd></div>
+              <div><dt>块 82</dt><dd data-field="block82">-</dd></div>
+              <div><dt>状态</dt><dd data-field="detail">-</dd></div>
+            </dl>
+          </article>
+        </div>
+      </section>
+
+      <section class="log-section" aria-labelledby="log-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">HID E2 / PN532</p>
+            <h2 id="log-heading">原始报文 <span id="log-count" class="count">0</span></h2>
+          </div>
+          <button id="clear-log-button" class="button quiet" type="button">清空</button>
+        </div>
+        <div id="raw-log" class="raw-log" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
