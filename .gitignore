@@ -6,6 +6,7 @@ app/build/
 **/.externalNativeBuild/
 captures/
 dist/
+docs/CONVERSATION_CHANGELOG.md
 
 # IDE and machine state
 .idea/

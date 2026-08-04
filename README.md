@@ -1,17 +1,32 @@
 # AimeSimulator
 
-AimeSimulator 是一个面向 Android 的 NFC-F / FeliCa Lite 卡片配置管理与 HCE-F 模拟工具。它可以在本机保存多张卡片配置，读取实体 NFC-F 卡的部分公开数据，并通过 Android `HostNfcFService` 将当前配置提供给读卡端。
+AimeSimulator 是一个面向 Android 的 NFC-F / FeliCa Lite 卡片配置管理与 HCE-F 模拟工具。它可以保存多张本地配置，通过统一读卡入口读取 Amusement IC、普通 FeliCa 和旧式 MIFARE Aime 的可用信息，并由 Android `HostNfcFService` 向读卡端提供当前配置。
 
-本项目依据公开接口和可观察行为独立实现，不包含旧项目的源码或预编译二进制文件。
+当前版本为 `2.2.5`。项目使用 Android 公开接口、协议资料和互操作实现作为开发依据；AIC/SPAD0 读取行为参考了 Project HINATA 的公开实现，具体来源见“实现参考、版权与第三方组件”。
 
 > [!WARNING]
 > 本项目会使用 HCE-F、LSPosed Hook、Root 命令和厂商 NFC HAL 注入。请仅在自己拥有或获准测试的设备与卡片上使用，并提前准备可恢复系统的手段。项目不保证兼容任何具体商业设备或服务。
 
+## 快速开始（无 Root）
+
+1. 从 [GitHub Releases](https://github.com/UmiSlat/AimeSimulator/releases) 安装最新 APK。
+2. 打开应用，在 Android 系统界面中确认是否将 AimeSimulator 设为默认 NFC 应用。
+3. 在“卡片”页选择“手动添加”或“读取卡片”，检查字段后保存配置。
+4. 选中要使用的配置；首次尝试建议保持 PMm 补丁关闭。
+5. 保持应用位于前台，将手机靠近读卡端测试。
+
+无 Root 路径依赖设备原生支持 HCE-F，并正确接受应用声明的 NFCID2、System Code 和 PMm。若动态 IDm 被系统拒绝，可以先尝试“兼容模式”；只有原生路径确实失败时，才需要后文的 LSPosed 或 KernelSU 兼容组件。
+
+> [!IMPORTANT]
+> 将本应用设为默认 NFC 应用会替换现有的默认非接触式支付应用，可能暂时影响手机钱包。测试结束后可在 Android 的默认应用或非接触式付款设置中恢复原应用。
+
 ## 功能概览
 
 - 管理多张本地卡片配置，可添加、编辑、删除和切换当前配置。
-- 支持手动填写卡面 Access Code、IDm、S_PAD0 和 ID 块。
-- 支持读取实体 NFC-F 卡，并尝试获取 IDm、S_PAD0 与 ID 块。
+- 支持手动填写或从支持的实体卡读取 Access Code、IDm、S_PAD0 和 ID 块。
+- 使用单一“读取卡片”入口自动识别 Amusement IC、普通 FeliCa 和旧式 MIFARE Aime。
+- Amusement IC 可读取 IDm、加密 S_PAD0、ID 块并解密得到 Access Code。
+- 普通 FeliCa 可尝试读取 IDm、S_PAD0 与 ID 块；旧式 MIFARE Aime 可读取 UID 与 Access Code。
 - 提供正常模式与兼容模式两种 NFCID2 路由方式。
 - 进入应用时检查系统默认 NFC 支付应用；如果尚未选择本应用，则打开 Android 的系统确认界面。
 - 响应 FeliCa Lite 的 Read Without Encryption 请求。
@@ -27,13 +42,21 @@ AimeSimulator 是一个面向 Android 的 NFC-F / FeliCa Lite 卡片配置管理
 
 ## 运行条件
 
-### 基础模拟
+### 基础功能
 
 - Android 10 或更高版本（最低 API 29）。
 - 设备必须具有 NFC，并由系统声明支持 NFC-F 主机卡模拟（HCE-F）。
 - 使用模拟时需要保持 NFC 开启，并让 AimeSimulator 位于前台。
 
 仅安装 APK 就可以管理配置，并通过系统原生 HCE-F 声明 NFCID2、System Code 和 PMm。若设备限制自定义 NFCID2，或厂商 NFC 栈忽略/替换标准 PMm，才需要下方对应的 Hook/Root 环境。
+
+| 能力 | Root/LSPosed 要求 | 说明 |
+| --- | --- | --- |
+| 配置管理与实体卡读取 | 不需要 | 仍受手机 NFC 芯片和驱动支持范围限制 |
+| 标准 HCE-F 模拟 | 不需要 | 设备需原生支持 HCE-F |
+| 兼容模式固定 NFCID2 | 不需要 | 用于系统拒绝动态卡号的情况 |
+| 放宽 NFCID2 / System Code 校验 | 按需使用 LSPosed | 作用域仅为 `com.android.nfc` |
+| PMm 厂商兼容补丁 | 按需使用 Root | Android 15+ 还需要 KernelSU 模块 |
 
 ### 兼容性组件
 
@@ -55,7 +78,7 @@ Android 15+ 的 PMm 路径具有设备相关性：
 
 ### 1. 安装 APK
 
-安装构建得到的 `app-debug.apk`，或安装项目发布页提供的 APK。更新安装会保留本应用包名下已经保存的配置；卸载应用通常会清除这些本地数据。
+安装构建得到的 `app-debug.apk`，或从 [GitHub Releases](https://github.com/UmiSlat/AimeSimulator/releases) 下载版本化 APK。更新安装会保留本应用包名下已经保存的配置；卸载应用通常会清除这些本地数据。
 
 应用包名为：
 
@@ -63,7 +86,15 @@ Android 15+ 的 PMm 路径具有设备相关性：
 io.github.umislat.aimesimulator
 ```
 
-### 2. 配置 LSPosed
+### 2. 首次运行
+
+1. 保持 LSPosed、PMm 补丁和 KernelSU 模块关闭。
+2. 添加或读取一张卡片配置并选中它。
+3. 在系统提示中确认默认 NFC 应用。
+4. 先用正常模式测试；若系统拒绝动态 IDm，再尝试兼容模式。
+5. 只有状态正常但外部读卡仍失败时，再继续配置兼容组件。
+
+### 3A. 配置 LSPosed（按需）
 
 1. 确认使用支持现代 libxposed API 101 的 LSPosed 版本。
 2. 在 LSPosed 中启用 AimeSimulator 模块。
@@ -73,7 +104,7 @@ io.github.umislat.aimesimulator
 
 如果系统原生接受所用 NFCID2，并正确采用 APK 中的 `t3tPmm-filter`，可以不启用 LSPosed 或 PMm 补丁。是否需要兜底组件应以实际读卡结果为准。
 
-### 3A. Android 14 及以下的 PMm 兜底补丁（按需）
+### 3B. Android 14 及以下的 PMm 兜底补丁（按需）
 
 1. 完成 APK 和 LSPosed 配置。
 2. 打开 AimeSimulator，进入“设置”。
@@ -82,7 +113,7 @@ io.github.umislat.aimesimulator
 
 因此 Android 14 及以下切换 PMm 时，NFC 会短暂不可用；应用会等待 NFC Binder 恢复并重试 HCE-F 注册。
 
-### 3B. Android 15 及以上的 PMm 兜底补丁（按需）
+### 3C. Android 15 及以上的 PMm 兜底补丁（按需）
 
 1. 在 KernelSU 管理器中安装 `aimesim-pmm-ksu-v3.zip`。
 2. 安装完成后重启一次设备。模块首次安装时默认保持关闭。
@@ -106,6 +137,16 @@ io.github.umislat.aimesimulator
 | ID 块 | 32 个十六进制字符 | 可选，表示 16 字节块数据 |
 
 输入会被规范化为大写十六进制；长度不正确或包含非十六进制字符时不会保存。
+
+### 实体卡读取支持
+
+| 卡片类型 | 手机侧技术 | 可读取内容 | 配置处理 |
+| --- | --- | --- | --- |
+| Amusement IC | NFC-F / FeliCa | IDm、System Code、加密 S_PAD0、ID 块、Access Code | 可直接带入编辑器 |
+| 普通 FeliCa | NFC-F / FeliCa | IDm、System Code，并尝试读取 S_PAD0 与 ID 块 | 可创建配置，缺失块保持可选 |
+| 旧式 Aime | NFC-A / MIFARE Classic | UID、Access Code | 需在保存前填写对应的 FeliCa IDm |
+
+MIFARE Classic 能否读取还取决于手机 NFC 控制器和 Android 驱动。检测到 NFC-A 不代表设备一定提供 `MifareClassic` 接口。
 
 ### 读取实体卡
 
@@ -197,6 +238,29 @@ Android 15+ 的模块将状态保存在 `/data/adb/aimesim_pmm/`。设置页可�
 
 ## 常见问题
 
+### 不使用 Root 能否工作
+
+可以先使用系统原生路径。设备需要支持 HCE-F，并接受 APK 声明的 System Code 和 PMm；动态 IDm 被限制时可尝试兼容模式。Root、LSPosed 和 KernelSU 都是异常设备的兼容方案，不是配置管理、实体卡读取或标准 HCE-F 模拟的前置条件。
+
+### 实体卡靠近后没有反应
+
+- 确认 Android NFC 已开启，并将卡片移开后重新贴近手机天线位置。
+- 确认应用停留在“读取卡片”页面；同一张卡持续贴住时 Android 通常不会重复触发发现回调。
+- Amusement IC 和普通 FeliCa 需要 NFC-F；旧式 Aime 需要手机驱动提供 MIFARE Classic。
+- 取下手机壳或避免同时贴放多张 NFC 卡，以排除耦合距离和冲突问题。
+
+### 检测到 Amusement IC，但 Block 0 读取失败
+
+应用会使用服务 `000B` 读取 Block `00`，组合读取失败时再单独重试。请保持卡片静止并重新贴卡；如果持续失败，应记录手机型号、Android 版本和 NFC 日志。并非所有外观相似的 FeliCa 卡都符合 Amusement IC 的 IDm、PMm、System Code 和 SPAD0 数据格式。
+
+### 为什么旧式 Aime 识别后仍需填写 FeliCa IDm
+
+旧式 Aime 是 MIFARE Classic 卡，只能提供其 UID 和 Access Code；AimeSimulator 的模拟端使用 Android HCE-F，需要 8 字节 FeliCa IDm。应用不会把 MIFARE UID 伪装成 IDm，因此保存前必须由用户提供对应的 FeliCa 配置。
+
+### 手机检测到 NFC-A，但无法读取 MIFARE Classic
+
+部分手机 NFC 控制器或厂商驱动不公开 Android `MifareClassic` 接口。这种限制无法通过应用层密钥或重试修复，可改用支持 MIFARE Classic 的设备读取。
+
 ### 系统提示“不支持 NFC-F 主机卡模拟”
 
 设备必须由系统声明 `android.hardware.nfc.hcef`。拥有普通 NFC 或能够读取 FeliCa 卡，不代表设备一定支持 HCE-F；应用无法通过 Root 或 Hook 补出缺失的硬件/系统实现。
@@ -268,9 +332,10 @@ python tools\check_artifacts.py
 生成文件：
 
 - APK：`app/build/outputs/apk/debug/app-debug.apk`
+- 当前版本化交付 APK：`dist/AimeSimulator-2.2.5-debug.apk`
 - KernelSU 模块：`dist/aimesim-pmm-ksu-v3.zip`
 
-`tools/check_artifacts.py` 会检查 APK 中的 libxposed API 101 元数据、静态作用域和 arm64 原生库，同时检查 KernelSU ZIP 的必要文件是否完整。
+`tools/check_artifacts.py` 会检查 APK 中的 libxposed API 101 元数据、静态作用域和 arm64 原生库，同时检查 KernelSU ZIP 的必要文件是否完整。版本化 APK 是发布交付副本；Gradle 默认仍输出 `app-debug.apk`。
 
 ## 项目结构
 
@@ -296,9 +361,11 @@ THIRD_PARTY_NOTICES.md       第三方依赖及其许可证
 - 应用没有网络权限，不会主动上传卡片配置。
 - Root、LSPosed 与 KernelSU 本身具有较高权限；请从可信来源安装并自行评估系统风险。
 
-## 版权与第三方组件
+## 实现参考、版权与第三方组件
 
-项目自有代码是独立实现。Dobby、libxposed API、AndroidX、Material Components、Kotlin 和测试依赖分别遵循其自身许可证，详见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。
+AIC 卡片指纹、FeliCa Block 0 读取和 SPAD0 变换行为参考并核对了 [Project-HINATA/hinata_go](https://github.com/Project-HINATA/hinata_go/tree/c56d8badc3a720e0ba9e2f721f3f73111f2f6d97) 的公开实现。项目不包含该应用的预编译二进制文件；具体参考范围和许可注意事项见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。
+
+Dobby、libxposed API、AndroidX、Material Components、Kotlin 和测试依赖分别遵循其自身许可证。
 
 当前仓库未附带授予复制、修改或再发布项目自有代码权利的开源许可证；除第三方组件另有声明外，默认保留相应权利。
 
@@ -306,4 +373,4 @@ Aime 及相关名称和标识属于其各自权利人。本项目是非官方兼
 
 ## English summary
 
-AimeSimulator is an independent Android HCE-F / FeliCa Lite profile simulator. It supports local profiles, limited physical-card capture, normal and compatibility NFCID2 routing, libxposed API 101 integration, and an experimental arm64 KernelSU PMm patch for tested ST NFC HAL implementations on Android 15+. See the Chinese sections above for requirements, installation steps, limitations, and safety notes.
+AimeSimulator is an Android HCE-F / FeliCa Lite profile manager and simulator. Version 2.2.5 provides one physical-card reader flow for Amusement IC, generic FeliCa, and legacy MIFARE Aime cards, including supported Access Code extraction. Standard profile management, card reading, compatibility-mode routing, and HCE-F operation can be tried without root; LSPosed and the experimental arm64 KernelSU PMm patch are optional compatibility paths for affected devices. See the Chinese sections above for requirements, limitations, implementation references, and safety notes.
