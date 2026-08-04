@@ -102,8 +102,8 @@
     <string name="rootless_profile_required_title">需要卡片配置</string>
     <string name="rootless_profile_required_detail">添加并选中一张配置后，应用会使用它检测 HCE-F 注册。检测不会写入实体卡。</string>
     <string name="rootless_accepted_title">88B4 注册已通过</string>
-    <string name="rootless_accepted_normal_detail">当前 IDm、System Code 88B4 和前台 HCE-F 已被 Android 接受。关闭 LSPosed 和 PMm 补丁后出现此结果，才可视为原生路径通过；PMm 仍需由读卡端实测。</string>
-    <string name="rootless_accepted_compatibility_detail">兼容 IDm、System Code 88B4 和前台 HCE-F 已被 Android 接受。关闭 LSPosed 和 PMm 补丁后出现此结果，才可视为兼容 IDm 的无 Root 路径通过；PMm 仍需由读卡端实测。</string>
+    <string name="rootless_accepted_normal_detail">当前 IDm、System Code 88B4 和前台 HCE-F 已被 Android 接受。只有关闭 LSPosed 和 PMm 补丁并重启设备后出现此结果，才可视为原生路径通过；PMm 仍需由读卡端实测。</string>
+    <string name="rootless_accepted_compatibility_detail">兼容 IDm、System Code 88B4 和前台 HCE-F 已被 Android 接受。只有关闭 LSPosed 和 PMm 补丁并重启设备后出现此结果，才可视为兼容 IDm 的无 Root 路径通过；PMm 仍需由读卡端实测。</string>
     <string name="rootless_unsupported_title">缺少 HCE-F 支持</string>
     <string name="rootless_unsupported_detail">设备未声明 NFC-F 主机卡模拟能力，应用层无法补充缺失的系统或硬件实现。</string>
     <string name="rootless_nfc_disabled_title">NFC 已关闭</string>
@@ -111,11 +111,11 @@
     <string name="rootless_checking_title">正在等待检测</string>
     <string name="rootless_checking_detail">NFC 服务正在启动或恢复；应用会进行有限次数的自动重试。</string>
     <string name="rootless_dynamic_id_title">动态 IDm 被拒绝</string>
-    <string name="rootless_dynamic_id_detail">当前卡片 IDm 未通过系统校验。切换到兼容模式后重试，可继续确认固定 02FE IDm 与 88B4 是否可用。</string>
+    <string name="rootless_dynamic_id_detail">当前卡片 IDm 未通过系统校验。切换到兼容模式后重试；如果刚启用 LSPosed 模块或修改作用域，请先重启设备，使 Hook 随 com.android.nfc 重新加载。</string>
     <string name="rootless_compatibility_id_title">兼容 IDm 也被拒绝</string>
     <string name="rootless_compatibility_id_detail">系统连固定的 02FE 兼容 IDm 都未接受，当前设备无法通过应用公开接口继续无 Root HCE-F 注册。</string>
     <string name="rootless_system_code_title">System Code 88B4 被拒绝</string>
-    <string name="rootless_system_code_detail">这是标准 Android/ROM 上的核心门槛。失败后本服务会停用；此时扫描到 MIMIBEAM/FEEF 等其他值，来自其他 NFC-F 端点。System Code 4000 只用于通用诊断，不会自动降级为 AIME 模式。</string>
+    <string name="rootless_system_code_detail">这是标准 Android/ROM 上的核心门槛。若刚启用 LSPosed，请先重启设备使 Hook 随 com.android.nfc 加载。失败后本服务会停用；System Code 4000 只用于通用诊断，不会自动降级为 AIME 模式。</string>
     <string name="rootless_enable_title">前台 HCE-F 启用失败</string>
     <string name="rootless_enable_detail">IDm 与 88B4 已完成注册，但 Android 未启用服务。请确认应用位于前台且已设为默认 NFC 应用后重试。</string>
     <string name="rootless_error_title">检测发生异常</string>

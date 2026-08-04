@@ -103,8 +103,8 @@
     <string name="rootless_profile_required_title">Card profile required</string>
     <string name="rootless_profile_required_detail">Add and select a profile to test HCE-F registration with it. The check never writes to a physical card.</string>
     <string name="rootless_accepted_title">88B4 registration accepted</string>
-    <string name="rootless_accepted_normal_detail">Android accepted the current IDm, System Code 88B4, and foreground HCE-F service. This confirms the native path only when LSPosed and the PMm patch are disabled; the reader must still verify the PMm.</string>
-    <string name="rootless_accepted_compatibility_detail">Android accepted the compatibility IDm, System Code 88B4, and foreground HCE-F service. This confirms the compatibility-IDm rootless path only when LSPosed and the PMm patch are disabled; the reader must still verify the PMm.</string>
+    <string name="rootless_accepted_normal_detail">Android accepted the current IDm, System Code 88B4, and foreground HCE-F service. This confirms the native path only after LSPosed and the PMm patch are disabled and the device is rebooted; the reader must still verify the PMm.</string>
+    <string name="rootless_accepted_compatibility_detail">Android accepted the compatibility IDm, System Code 88B4, and foreground HCE-F service. This confirms the compatibility-IDm rootless path only after LSPosed and the PMm patch are disabled and the device is rebooted; the reader must still verify the PMm.</string>
     <string name="rootless_unsupported_title">HCE-F is unavailable</string>
     <string name="rootless_unsupported_detail">The device does not declare NFC-F host card emulation. An app cannot supply missing system or hardware support.</string>
     <string name="rootless_nfc_disabled_title">NFC is off</string>
@@ -112,11 +112,11 @@
     <string name="rootless_checking_title">Waiting to check</string>
     <string name="rootless_checking_detail">The NFC service is starting or recovering. The app will retry a limited number of times.</string>
     <string name="rootless_dynamic_id_title">Dynamic IDm rejected</string>
-    <string name="rootless_dynamic_id_detail">The card IDm did not pass system validation. Enable compatibility mode and retry to test the fixed 02FE IDm with 88B4.</string>
+    <string name="rootless_dynamic_id_detail">The card IDm did not pass system validation. Try compatibility mode. If LSPosed was just enabled or its scope changed, reboot first so the hook loads with com.android.nfc.</string>
     <string name="rootless_compatibility_id_title">Compatibility IDm rejected</string>
     <string name="rootless_compatibility_id_detail">Android did not accept even the fixed 02FE compatibility IDm, so this device cannot continue rootless HCE-F registration through public app APIs.</string>
     <string name="rootless_system_code_title">System Code 88B4 rejected</string>
-    <string name="rootless_system_code_detail">This is the central restriction on standard Android ROMs. The service is disabled after this failure; values such as MIMIBEAM/FEEF then belong to another NFC-F endpoint. System Code 4000 is only for explicit generic diagnostics and is never an automatic AIME fallback.</string>
+    <string name="rootless_system_code_detail">This is the central restriction on standard Android ROMs. If LSPosed was just enabled, reboot so the hook loads with com.android.nfc. The service is disabled after failure; System Code 4000 remains diagnostic only.</string>
     <string name="rootless_enable_title">Foreground HCE-F activation failed</string>
     <string name="rootless_enable_detail">The IDm and 88B4 were registered, but Android did not enable the service. Keep the app in the foreground, confirm it is the default NFC app, and retry.</string>
     <string name="rootless_error_title">Check failed unexpectedly</string>

@@ -17,7 +17,7 @@ AimeSimulator 是一个面向 Android 的 NFC-F / FeliCa Lite 卡片配置管理
 
 无 Root 路径依赖设备原生支持 HCE-F，并正确接受应用声明的 NFCID2、System Code 和 PMm。若动态 IDm 被系统拒绝，可以先尝试“兼容模式”；只有原生路径确实失败时，才需要后文的 LSPosed 或 KernelSU 兼容组件。
 
-状态页的“无 Root 兼容性”检测复用当前配置的真实 HCE-F 注册结果。要判断纯无 Root 路径，请先关闭 LSPosed、PMm Hook 和 KernelSU 模块；检测通过只代表 Android 接受了当前 IDm、`88B4` 和前台服务，PMm 仍需由实际读卡端验证。
+状态页的“无 Root 兼容性”检测复用当前配置的真实 HCE-F 注册结果。要判断纯无 Root 路径，请先关闭 LSPosed、PMm Hook 和 KernelSU 模块并重启设备；仅在管理器中关闭模块不会卸载已经进入 `com.android.nfc` 的 Hook。检测通过只代表 Android 接受了当前 IDm、`88B4` 和前台服务，PMm 仍需由实际读卡端验证。
 
 > [!IMPORTANT]
 > 将本应用设为默认 NFC 应用会替换现有的默认非接触式支付应用，可能暂时影响手机钱包。测试结束后可在 Android 的默认应用或非接触式付款设置中恢复原应用。
@@ -105,6 +105,8 @@ io.github.umislat.aimesimulator
 3. 作用域只选择“应用”中的 `com.android.nfc`。
 4. 不要选择系统框架。
 5. 重启设备，或按照所用框架的要求重新加载 NFC 进程。
+
+LSPosed 只会在目标进程启动时装载模块。设备开机后才启用 AimeSimulator 模块或修改作用域时，必须再次重启设备（或可靠地重启 `com.android.nfc`）；仅授予 AimeSimulator Root 权限不会让校验 Hook 立即生效。反过来，关闭模块后也必须重启，才能得到不受残留 Hook 影响的无 Root 测试结果。
 
 如果系统原生接受所用 NFCID2，并正确采用 APK 中的 `t3tPmm-filter`，可以不启用 LSPosed 或 PMm 补丁。是否需要兜底组件应以实际读卡结果为准。
 
