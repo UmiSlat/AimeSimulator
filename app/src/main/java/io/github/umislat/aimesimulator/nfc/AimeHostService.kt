@@ -7,7 +7,7 @@ import io.github.umislat.aimesimulator.BuildConfig
 import io.github.umislat.aimesimulator.data.CardProfile
 import io.github.umislat.aimesimulator.data.CardStore
 
-class AimeHostService : HostNfcFService() {
+open class AimeHostService : HostNfcFService() {
     override fun processNfcFPacket(commandPacket: ByteArray, extras: Bundle?): ByteArray? {
         val request = FelicaCodec.decodeRequest(commandPacket) ?: return null
         val profile = CardStore(this).selectedProfile() ?: CardProfile.fallback()
@@ -45,3 +45,5 @@ class AimeHostService : HostNfcFService() {
         private const val TAG = "AimeHostService"
     }
 }
+
+class StaticAimeHostService : AimeHostService()

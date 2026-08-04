@@ -99,6 +99,7 @@
     <string name="rootless_check">Rootless compatibility</string>
     <string name="rootless_check_88b4">Check 88B4</string>
     <string name="rootless_test_4000">Test generic 4000 HCE-F</string>
+    <string name="rootless_test_static_88b4">Test static 88B4</string>
     <string name="rootless_profile_required_title">Card profile required</string>
     <string name="rootless_profile_required_detail">Add and select a profile to test HCE-F registration with it. The check never writes to a physical card.</string>
     <string name="rootless_accepted_title">88B4 registration accepted</string>
@@ -128,6 +129,13 @@
     <string name="generic_hcef_id_rejected">Android rejected the fixed 02FE compatibility IDm, so the generic 4000 check cannot continue.</string>
     <string name="generic_hcef_system_code_rejected">Android rejected even the standard diagnostic value 4000, indicating an additional HCE-F restriction on this device.</string>
     <string name="generic_hcef_enable_failed">The IDm and 4000 were registered, but Android could not enable the foreground HCE-F service.</string>
+    <string name="static_hcef_idle">The static XML probe tests whether Android keeps an 88B4 service without dynamic system-code registration.</string>
+    <string name="static_hcef_active">Static XML 88B4 diagnostic active</string>
+    <string name="static_hcef_ready">Android retained the static service. Scan now with HINATA and expect IDm %1$s, System Code 88B4, and PMm %2$s.</string>
+    <string name="static_hcef_failed">Static XML 88B4 diagnostic failed: %1$s</string>
+    <string name="static_hcef_id_removed">Android removed or replaced the static IDm while parsing the service: %1$s</string>
+    <string name="static_hcef_system_code_removed">Android removed or replaced static System Code 88B4 while parsing the service: %1$s. This closes the remaining public app-layer path on this ROM.</string>
+    <string name="static_hcef_enable_failed">Android retained the static IDm and 88B4 but could not enable the foreground HCE-F service.</string>
     <string name="privacy">Privacy</string>
     <string name="appearance">Appearance</string>
     <string name="theme_mode">Theme</string>
@@ -151,6 +159,7 @@
     <string name="state_active">Active</string>
     <string name="state_inactive">Inactive</string>
     <string name="hcef_service_description">Aime FeliCa profile service</string>
+    <string name="hcef_static_probe_description">Static Aime 88B4 diagnostic service</string>
     <string name="default_nfc_service_description">AimeSimulator default NFC app helper</string>
     <string name="xposed_description">Allows dynamic NFC-F identifiers and applies the optional PMm compatibility value.</string>
 </resources>

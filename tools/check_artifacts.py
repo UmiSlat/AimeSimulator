@@ -10,6 +10,9 @@ ROOT = Path(__file__).resolve().parents[1]
 APK = ROOT / "app" / "build" / "outputs" / "apk" / "debug" / "app-debug.apk"
 MODULE = ROOT / "dist" / "aimesim-pmm-ksu-v3.zip"
 HCEF_SERVICE = ROOT / "app" / "src" / "main" / "res" / "xml" / "host_nfcf_service.xml"
+STATIC_HCEF_SERVICE = (
+    ROOT / "app" / "src" / "main" / "res" / "xml" / "host_nfcf_static_aime_service.xml"
+)
 ANDROID_NAMESPACE = "{http://schemas.android.com/apk/res/android}"
 
 
@@ -23,11 +26,22 @@ def require_archive(path: Path, entries: set[str]) -> None:
         raise SystemExit(f"{path.name} is missing: {', '.join(missing)}")
 
 
+def require_hcef_metadata(path: Path, system_code: str, nfcid2: str, pmm: str) -> None:
+    root = ElementTree.parse(path).getroot()
+    expected = {
+        "system-code-filter": system_code,
+        "nfcid2-filter": nfcid2,
+        "t3tPmm-filter": pmm,
+    }
+    for tag, value in expected.items():
+        element = root.find(tag)
+        if element is None or element.get(f"{ANDROID_NAMESPACE}name") != value:
+            raise SystemExit(f"{path.name} does not declare {tag}={value}")
+
+
 def main() -> None:
-    hcef = ElementTree.parse(HCEF_SERVICE).getroot()
-    pmm = hcef.find("t3tPmm-filter")
-    if pmm is None or pmm.get(f"{ANDROID_NAMESPACE}name") != "00F1000000014300":
-        raise SystemExit("HCE-F metadata does not declare the compatibility PMm")
+    require_hcef_metadata(HCEF_SERVICE, "4000", "02FE000000000000", "00F1000000014300")
+    require_hcef_metadata(STATIC_HCEF_SERVICE, "88B4", "02FE001145141919", "00F1000000014300")
     require_archive(APK, {
         "AndroidManifest.xml",
         "META-INF/xposed/java_init.list",

@@ -61,9 +61,11 @@ class MainActivity : AppCompatActivity() {
     private var statusPageStatusView: TextView? = null
     private var lastHceReport: HceSession.Report? = null
     private var genericDiagnosticReport: HceSession.Report? = null
+    private var staticDiagnosticReport: HceSession.Report? = null
     private var rootlessStatusView: TextView? = null
     private var rootlessDetailView: TextView? = null
     private var genericDiagnosticStatusView: TextView? = null
+    private var staticDiagnosticStatusView: TextView? = null
 
     private var pmmSnapshot: PmmManager.Snapshot? = null
     private var pmmSwitch: MaterialSwitch? = null
@@ -160,6 +162,7 @@ class MainActivity : AppCompatActivity() {
         rootlessStatusView = null
         rootlessDetailView = null
         genericDiagnosticStatusView = null
+        staticDiagnosticStatusView = null
         pmmSwitch = null
         pmmStatus = null
         pmmProgress = null
@@ -411,6 +414,12 @@ class MainActivity : AppCompatActivity() {
                 setPadding(0, dp(4), 0, dp(10))
             }
             addView(genericDiagnosticStatusView)
+            staticDiagnosticStatusView = TextView(this@MainActivity).apply {
+                textSize = 13f
+                alpha = 0.76f
+                setPadding(0, 0, 0, dp(10))
+            }
+            addView(staticDiagnosticStatusView)
             addView(MaterialButton(
                 this@MainActivity,
                 null,
@@ -426,6 +435,14 @@ class MainActivity : AppCompatActivity() {
             ).apply {
                 setText(R.string.rootless_test_4000)
                 setOnClickListener { activateGenericDiagnostic() }
+            }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6) })
+            addView(MaterialButton(
+                this@MainActivity,
+                null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle
+            ).apply {
+                setText(R.string.rootless_test_static_88b4)
+                setOnClickListener { activateStaticAimeDiagnostic() }
             }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6) })
         })
     }
@@ -704,6 +721,7 @@ class MainActivity : AppCompatActivity() {
     private fun activateSelected(attempt: Int = 0) {
         cancelActivationRetry()
         genericDiagnosticReport = null
+        staticDiagnosticReport = null
         val selected = store.selectedProfile()
         if (selected == null) {
             lastHceReport = null
@@ -734,11 +752,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun activateGenericDiagnostic() {
         cancelActivationRetry()
+        staticDiagnosticReport = null
         val selected = store.selectedProfile()
         if (selected == null) {
             genericDiagnosticReport = null
             setHceStatus(getString(R.string.select_or_add_card))
-            renderGenericDiagnostic()
+            renderDiagnosticReports()
             return
         }
         val report = session.activate(
@@ -752,7 +771,19 @@ class MainActivity : AppCompatActivity() {
             if (report.succeeded) getString(R.string.generic_hcef_active)
             else getString(R.string.generic_hcef_failed, report.detail)
         )
-        renderGenericDiagnostic()
+        renderDiagnosticReports()
+    }
+
+    private fun activateStaticAimeDiagnostic() {
+        cancelActivationRetry()
+        genericDiagnosticReport = null
+        val report = session.activateStaticAimeDiagnostic(this)
+        staticDiagnosticReport = report
+        setHceStatus(
+            if (report.succeeded) getString(R.string.static_hcef_active)
+            else getString(R.string.static_hcef_failed, report.detail)
+        )
+        renderDiagnosticReports()
     }
 
     private fun setHceStatus(message: CharSequence) {
@@ -802,7 +833,12 @@ class MainActivity : AppCompatActivity() {
         } else {
             getString(detail)
         }
+        renderDiagnosticReports()
+    }
+
+    private fun renderDiagnosticReports() {
         renderGenericDiagnostic()
+        renderStaticDiagnostic()
     }
 
     private fun renderGenericDiagnostic() {
@@ -822,6 +858,29 @@ class MainActivity : AppCompatActivity() {
             HceSession.Stage.ENABLE -> getString(R.string.generic_hcef_enable_failed)
             HceSession.Stage.EXCEPTION -> getString(
                 R.string.generic_hcef_failed,
+                report.detail.ifBlank { getString(R.string.rootless_unknown_error) }
+            )
+        }
+    }
+
+    private fun renderStaticDiagnostic() {
+        val report = staticDiagnosticReport
+        staticDiagnosticStatusView?.text = when (report?.stage) {
+            null -> getString(R.string.static_hcef_idle)
+            HceSession.Stage.READY -> getString(
+                R.string.static_hcef_ready,
+                HceSession.STATIC_AIME_IDM.chunked(4).joinToString(" "),
+                STANDARD_PMM_DISPLAY
+            )
+            HceSession.Stage.UNSUPPORTED -> getString(R.string.rootless_unsupported_detail)
+            HceSession.Stage.NFC_DISABLED -> getString(R.string.rootless_nfc_disabled_detail)
+            HceSession.Stage.SERVICE_RESTARTING -> getString(R.string.rootless_checking_detail)
+            HceSession.Stage.ID -> getString(R.string.static_hcef_id_removed, report.detail)
+            HceSession.Stage.SYSTEM_CODE ->
+                getString(R.string.static_hcef_system_code_removed, report.detail)
+            HceSession.Stage.ENABLE -> getString(R.string.static_hcef_enable_failed)
+            HceSession.Stage.EXCEPTION -> getString(
+                R.string.static_hcef_failed,
                 report.detail.ifBlank { getString(R.string.rootless_unknown_error) }
             )
         }

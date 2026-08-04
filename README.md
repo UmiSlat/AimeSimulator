@@ -2,7 +2,7 @@
 
 AimeSimulator 是一个面向 Android 的 NFC-F / FeliCa Lite 卡片配置管理与 HCE-F 模拟工具。它可以保存多张本地配置，通过统一读卡入口读取 Amusement IC、普通 FeliCa 和旧式 MIFARE Aime 的可用信息，并由 Android `HostNfcFService` 向读卡端提供当前配置。
 
-当前实验分支版本为 `2.2.7`。项目使用 Android 公开接口、协议资料和互操作实现作为开发依据；AIC/SPAD0 读取行为参考了 Project HINATA 的公开实现，具体来源见“实现参考、版权与第三方组件”。
+当前实验分支版本为 `2.2.8`。项目使用 Android 公开接口、协议资料和互操作实现作为开发依据；AIC/SPAD0 读取行为参考了 Project HINATA 的公开实现，具体来源见“实现参考、版权与第三方组件”。
 
 > [!WARNING]
 > 本项目会使用 HCE-F、LSPosed Hook、Root 命令和厂商 NFC HAL 注入。请仅在自己拥有或获准测试的设备与卡片上使用，并提前准备可恢复系统的手段。项目不保证兼容任何具体商业设备或服务。
@@ -31,6 +31,7 @@ AimeSimulator 是一个面向 Android 的 NFC-F / FeliCa Lite 卡片配置管理
 - 普通 FeliCa 可尝试读取 IDm、S_PAD0 与 ID 块；旧式 MIFARE Aime 可读取 UID 与 Access Code。
 - 提供正常模式与兼容模式两种 NFCID2 路由方式。
 - 在状态页显示 NFC-F 注册的无 Root 兼容性结果，并区分 NFCID2、`88B4` 和服务启用失败。
+- 提供独立的通用 `4000` 与静态 XML `88B4` 探针，用于定位 ROM 的 HCE-F 校验阶段。
 - 进入应用时检查系统默认 NFC 支付应用；如果尚未选择本应用，则打开 Android 的系统确认界面。
 - 响应 FeliCa Lite 的 Read Without Encryption 请求。
 - 通过标准 HCE-F `t3tPmm-filter` 声明 PMm `00F1000000014300`，兼容的系统无需 Hook。
@@ -249,6 +250,8 @@ Android 15+ 的模块将状态保存在 `/data/adb/aimesim_pmm/`。设置页可�
 
 若 `88B4` 被拒绝，可以点击“测试 4000 通用 HCE-F”。成功后应用会显式启用固定兼容 IDm `02FE001145141919`、System Code `4000` 和声明的 PMm，供 HINATA 等通用工具核对手机实际暴露的数据。该模式只用于区分本应用与厂商 Beam/共享等其他 NFC-F 端点，不表示 AIME 读卡器能够发现；再次点击“检测 88B4”或离开应用会结束该诊断路径。
 
+`2.2.8` 还提供“测试静态 88B4”：独立 `HostNfcFService` 在 XML 中直接声明固定 IDm `02FE001145141919`、System Code `88B4` 和 PMm，不调用动态 System Code 注册接口。应用会先读取 Android 解析后保留的 IDm 与 System Code；只有两者仍然正确且前台服务启用成功时，才提示使用 HINATA 实测。若解析阶段已经移除或替换 `88B4`，说明该 ROM 的静态与动态路径都受到相同限制。
+
 ### 实体卡靠近后没有反应
 
 - 确认 Android NFC 已开启，并将卡片移开后重新贴近手机天线位置。
@@ -340,7 +343,7 @@ python tools\check_artifacts.py
 
 - APK：`app/build/outputs/apk/debug/app-debug.apk`
 - 当前稳定版本化 APK：`dist/AimeSimulator-2.2.5-debug.apk`
-- 无 Root 实验 APK：`dist/AimeSimulator-2.2.7-rootless-probe-debug.apk`
+- 无 Root 静态探针 APK：`dist/AimeSimulator-2.2.8-static-88b4-probe-debug.apk`
 - KernelSU 模块：`dist/aimesim-pmm-ksu-v3.zip`
 
 `tools/check_artifacts.py` 会检查 APK 中的 libxposed API 101 元数据、静态作用域和 arm64 原生库，同时检查 KernelSU ZIP 的必要文件是否完整。版本化 APK 是发布交付副本；Gradle 默认仍输出 `app-debug.apk`。
@@ -381,4 +384,4 @@ Aime 及相关名称和标识属于其各自权利人。本项目是非官方兼
 
 ## English summary
 
-AimeSimulator is an Android HCE-F / FeliCa Lite profile manager and simulator. The 2.2.7 rootless experiment adds status-page checks for the actual NFCID2, System Code 88B4, and foreground-service registration result, plus an explicit generic System Code 4000 probe that distinguishes this app from other NFC-F endpoints. Version 2.2.5 remains the stable physical-card reader delivery. See the Chinese sections above for requirements, limitations, implementation references, and safety notes.
+AimeSimulator is an Android HCE-F / FeliCa Lite profile manager and simulator. The 2.2.8 rootless experiment adds status-page checks for the actual NFCID2, System Code 88B4, and foreground-service registration result, plus explicit generic 4000 and static XML 88B4 probes for identifying the ROM validation stage. Version 2.2.5 remains the stable physical-card reader delivery. See the Chinese sections above for requirements, limitations, implementation references, and safety notes.

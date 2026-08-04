@@ -98,6 +98,7 @@
     <string name="rootless_check">无 Root 兼容性</string>
     <string name="rootless_check_88b4">检测 88B4</string>
     <string name="rootless_test_4000">测试 4000 通用 HCE-F</string>
+    <string name="rootless_test_static_88b4">测试静态 88B4</string>
     <string name="rootless_profile_required_title">需要卡片配置</string>
     <string name="rootless_profile_required_detail">添加并选中一张配置后，应用会使用它检测 HCE-F 注册。检测不会写入实体卡。</string>
     <string name="rootless_accepted_title">88B4 注册已通过</string>
@@ -127,6 +128,13 @@
     <string name="generic_hcef_id_rejected">系统拒绝了固定的 02FE 兼容 IDm，无法继续 4000 通用诊断。</string>
     <string name="generic_hcef_system_code_rejected">系统连标准诊断值 4000 都拒绝，设备的 HCE-F 实现存在额外限制。</string>
     <string name="generic_hcef_enable_failed">IDm 与 4000 已注册，但 Android 未能启用前台 HCE-F 服务。</string>
+    <string name="static_hcef_idle">静态 XML 探针用于检测 Android 能否在不动态注册 System Code 的情况下保留 88B4 服务。</string>
+    <string name="static_hcef_active">静态 XML 88B4 诊断已启用</string>
+    <string name="static_hcef_ready">Android 已保留静态服务。现在用 HINATA 扫描，预期 IDm 为 %1$s、System Code 为 88B4、PMm 为 %2$s。</string>
+    <string name="static_hcef_failed">静态 XML 88B4 诊断失败：%1$s</string>
+    <string name="static_hcef_id_removed">Android 在解析服务时移除或替换了静态 IDm：%1$s</string>
+    <string name="static_hcef_system_code_removed">Android 在解析服务时移除或替换了静态 System Code 88B4：%1$s。该 ROM 上最后一种公开应用层路径也已排除。</string>
+    <string name="static_hcef_enable_failed">Android 保留了静态 IDm 与 88B4，但未能启用前台 HCE-F 服务。</string>
     <string name="privacy">隐私</string>
     <string name="appearance">外观</string>
     <string name="theme_mode">主题模式</string>
@@ -150,6 +158,7 @@
     <string name="state_active">已启用</string>
     <string name="state_inactive">未启用</string>
     <string name="hcef_service_description">Aime FeliCa 配置服务</string>
+    <string name="hcef_static_probe_description">静态 Aime 88B4 诊断服务</string>
     <string name="default_nfc_service_description">AimeSimulator 默认 NFC 应用辅助服务</string>
     <string name="xposed_description">允许动态 NFC-F 标识符，并可应用 PMm 兼容值。</string>
 </resources>
