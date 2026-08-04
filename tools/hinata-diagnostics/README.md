@@ -13,6 +13,9 @@ commands to the reader.
    python -m http.server 8765 --bind 127.0.0.1 --directory tools/hinata-diagnostics
    ```
 
+   On Windows, you can also double-click `start-hinata-diagnostics.bat` in this
+   directory. Keep its console window open while using the page.
+
 3. Open <http://127.0.0.1:8765/> in desktop Chrome.
 4. Select the HINATA USB device and run the full diagnostic while the phone is
    unlocked and the AimeSimulator HCE-F service is active.
