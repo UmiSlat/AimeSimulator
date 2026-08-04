@@ -73,7 +73,7 @@ class AboutActivity : AppCompatActivity() {
         content.addView(infoCard(R.string.about_capabilities_title, R.string.about_capabilities_body))
         content.addView(infoCard(R.string.about_privacy_title, R.string.about_privacy_body))
         content.addView(infoCard(R.string.about_safety_title, R.string.about_safety_body))
-        content.addView(infoCard(R.string.about_independence_title, R.string.about_independence_body))
+        content.addView(infoCard(R.string.about_scope_title, R.string.about_scope_body))
         content.addView(MaterialButton(this).apply {
             setText(R.string.open_repository)
             setOnClickListener { openRepository(root) }

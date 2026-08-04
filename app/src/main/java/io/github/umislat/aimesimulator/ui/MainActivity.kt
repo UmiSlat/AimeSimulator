@@ -67,11 +67,14 @@ class MainActivity : AppCompatActivity() {
     private val reader = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
         val data = result.data ?: return@registerForActivityResult
-        val idm = data.getStringExtra(CardReaderActivity.EXTRA_IDM) ?: return@registerForActivityResult
+        val idm = data.getStringExtra(CardReaderActivity.EXTRA_IDM)
+        val accessCode = data.getStringExtra(CardReaderActivity.EXTRA_ACCESS_CODE)
+        if (idm == null && accessCode == null) return@registerForActivityResult
         showEditor(
             capturedIdm = idm,
             capturedSpad0 = data.getStringExtra(CardReaderActivity.EXTRA_SPAD0),
-            capturedIdBlock = data.getStringExtra(CardReaderActivity.EXTRA_ID_BLOCK)
+            capturedIdBlock = data.getStringExtra(CardReaderActivity.EXTRA_ID_BLOCK),
+            capturedAccessCode = accessCode
         )
     }
 
@@ -742,7 +745,8 @@ class MainActivity : AppCompatActivity() {
         initial: CardProfile? = null,
         capturedIdm: String? = null,
         capturedSpad0: String? = null,
-        capturedIdBlock: String? = null
+        capturedIdBlock: String? = null,
+        capturedAccessCode: String? = null
     ) {
         val name = editorField(
             R.string.card_name,
@@ -768,7 +772,8 @@ class MainActivity : AppCompatActivity() {
         val accessCode = editorField(
             R.string.access_code,
             R.string.access_code_helper,
-            initial?.formattedAccessCode().orEmpty(),
+            capturedAccessCode?.chunked(4)?.joinToString(" ")
+                ?: initial?.formattedAccessCode().orEmpty(),
             hex = false,
             numeric = true
         )

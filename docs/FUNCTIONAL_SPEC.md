@@ -10,8 +10,9 @@ an optional 20-digit printed Access Code, and optional 16-byte SPAD0 and ID-bloc
 survive process restarts. Deleting or reordering profiles must not select a different
 profile accidentally.
 
-The printed Access Code is display-only local metadata. It is never inferred from
-NFC data and does not alter HCE-F registration or the emulated card image.
+The printed Access Code is display-only local metadata. Physical-card profile
+capture does not infer or save it, and it does not alter HCE-F registration or
+the emulated card image.
 
 Normal mode registers the profile IDm with Android. Compatibility mode registers
 `02FE001145141919` while retaining the profile IDm inside the emulated card image.
@@ -35,12 +36,27 @@ the selected profile IDm in block `82`, PMm metadata in block `83`, system code 
 block `85`, and fixed compatibility metadata in blocks `86` and `88`. Captured
 SPAD0 and ID-block values override their generated counterparts.
 
-## Physical-card capture
+## Physical-card reading
 
-Reader mode accepts NFC-F tags. It records IDm and system code, then tries to read
-blocks `00` and `82` from service `000B` in one command. If the combined request
-fails, it retries each block separately. A profile can still be created when only
-the IDm is available.
+The single reader flow enables both NFC-F and NFC-A and dispatches by detected
+card technology.
+
+For an Amusement IC, it validates the HINATA-compatible IDm, PMm, and system-code
+fingerprint, then tries to read blocks `00` and `82` from service `000B` in one
+command. If combined reading fails, it reads the blocks separately. SPAD0 is
+decrypted and bytes 6 through 15 are displayed as the Access Code.
+
+For any other NFC-F card, the reader captures IDm, system code, SPAD0, and ID
+block using the existing combined-read and retry behavior. A profile can still
+be created when only the IDm is available.
+
+For a legacy NFC-A MIFARE Classic Aime card, it authenticates sector 0 with the
+Aime key as Key B and reads the packed-decimal Access Code from block 2. Since
+this card type does not supply a FeliCa IDm, one must be entered before saving.
+
+Opening the editor does not persist anything. Profile storage changes only after
+the user presses Save and all fields pass validation. Reading and profile
+creation never modify the physical card.
 
 ## Android service registration
 

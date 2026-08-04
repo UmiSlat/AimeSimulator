@@ -110,13 +110,16 @@ io.github.umislat.aimesimulator
 ### 读取实体卡
 
 1. 在主界面选择“读取卡片”。
-2. 将实体 NFC-F 卡保持在手机 NFC 天线附近。
-3. 应用先读取 IDm 和 System Code，再尝试从只读服务 `000B` 一次读取块 `00` 与块 `82`。
-4. 如果组合读取失败，会分别重试两个块；即使只能取得 IDm，仍可创建配置。
+2. 将 FeliCa、Amusement IC 或旧式 MIFARE Aime 卡保持在手机 NFC 天线附近。
+3. 应用自动判断卡片协议并读取可用字段。
+4. Amusement IC 或旧式 Aime 识别成功后，点击“用于卡片配置”进入编辑器。
 5. 检查自动填入的内容并保存。
 
-“读取卡片”只读取构建模拟配置所需的数据，不会向实体卡写入内容。
-卡面 Access Code 不属于此读取流程，需要在卡片编辑页中手动填写。
+- Amusement IC：从服务 `000B` 读取 Block `00` 与 `82`，解密 SPAD0 并提取 Access Code。
+- 普通 FeliCa：读取 IDm、System Code、S_PAD0 与 ID 块；组合读取失败时分别重试。
+- 旧式 Aime：使用 Key B 认证 MIFARE 扇区 0，从 Block 2 提取 Access Code；保存前仍需填写对应的 FeliCa IDm。
+
+只有点击编辑器的“保存”后才会写入本地配置，读取流程不会修改实体卡。
 
 ### 选择并模拟
 
