@@ -2,7 +2,7 @@
 
 AimeSimulator 是一个面向 Android 的 NFC-F / FeliCa Lite 卡片配置管理与 HCE-F 模拟工具。它可以保存多张本地配置，通过统一读卡入口读取 Amusement IC、普通 FeliCa 和旧式 MIFARE Aime 的可用信息，并由 Android `HostNfcFService` 向读卡端提供当前配置。
 
-当前实验分支版本为 `2.2.9`。项目使用 Android 公开接口、协议资料和互操作实现作为开发依据；AIC/SPAD0 读取行为参考了 Project HINATA 的公开实现，具体来源见“实现参考、版权与第三方组件”。
+当前实验分支版本为 `2.2.10`。项目使用 Android 公开接口、协议资料和互操作实现作为开发依据；AIC/SPAD0 读取行为参考了 Project HINATA 的公开实现，具体来源见“实现参考、版权与第三方组件”。
 
 > [!WARNING]
 > 本项目会使用 HCE-F、LSPosed Hook、Root 命令和厂商 NFC HAL 注入。请仅在自己拥有或获准测试的设备与卡片上使用，并提前准备可恢复系统的手段。项目不保证兼容任何具体商业设备或服务。
@@ -190,9 +190,9 @@ MIFARE Classic 能否读取还取决于手机 NFC 控制器和 Android 驱动。
 | 模式 | 向 Android 注册的 NFCID2 | 模拟数据中的卡片 IDm | 适用场景 |
 | --- | --- | --- | --- |
 | 正常模式 | 当前配置的 IDm | 当前配置的 IDm | 系统和读卡端均接受动态 IDm |
-| 兼容模式 | 固定为 `02FE001145141919` | 仍使用当前配置的 IDm | 系统或读卡端不接受动态卡号 |
+| 兼容模式 | 固定为 `02FE001145141919` | Block `82` 前 8 字节同步为 `02FE001145141919` | 测试读卡端是否要求轮询 IDm 与 ID 块一致 |
 
-兼容模式不会修改已经保存的配置，也不会改变 PMm 开关。它只改变交给 Android NFC 路由层的 NFCID2。
+兼容模式不会修改已经保存的配置，也不会改变 PMm 开关。`2.2.10` 除改变交给 Android NFC 路由层的 NFCID2 外，还会把响应中 Block `82` 的前 8 字节同步为相同值；已捕获 ID 块的后 8 字节保持不变。正常模式继续在路由层和 Block `82` 中使用配置的真实 IDm。
 
 ### 外观设置
 
@@ -255,6 +255,8 @@ Android 15+ 的模块将状态保存在 `/data/adb/aimesim_pmm/`。设置页可�
 `2.2.8` 还提供“测试静态 88B4”：独立 `HostNfcFService` 在 XML 中直接声明固定 IDm `02FE001145141919`、System Code `88B4` 和 PMm，不调用动态 System Code 注册接口。应用会先读取 Android 解析后保留的 IDm 与 System Code；只有两者仍然正确且前台服务启用成功时，才提示使用 HINATA 实测。若解析阶段已经移除或替换 `88B4`，说明该 ROM 的静态与动态路径都受到相同限制。
 
 `2.2.9` 将 `4000` 入口改为独立的默认 HCE-F 卡片模拟服务。该组件只使用 XML 中的固定 IDm `02FE001145141919`、System Code `4000` 和标准 PMm，不调用动态 IDm 或 System Code 注册接口；启用后仍由完整的 `AimeHostService` 返回当前所选卡片的 FeliCa Lite 块镜像。该模式用于机台互操作实验：只有读卡端会发现 `4000` 或进行宽范围轮询时才可能进入读写阶段，仅轮询 `88B4` 的机台仍无法发现。
+
+`2.2.10` 根据原始 AICEmu 的普通/兼容模式对照增加 IDm 一致性实验：动态兼容模式除了以 `02FE001145141919` 响应轮询，也在 Block `82` 的前 8 字节返回该值。原始 AICEmu 的源码备注说明，固定 `02FE...` 是为 Samsung S8 等要求 IDm 以 `02` 开头才能在 Polling 响应中携带 System Code 的设备准备的，并假设 Konami 读卡器读取该路由 IDm、SBGA 读卡器不检查它；它仍用真实卡片 IDm 构造 Block `82`。已知目标机台会拒绝这一组合，因此本实验用于区分拒绝原因是否为轮询 IDm 与 ID 块不一致。独立的静态 `88B4` 与 `4000` 诊断服务保持原有卡片镜像行为。
 
 ### 实体卡靠近后没有反应
 
@@ -348,6 +350,7 @@ python tools\check_artifacts.py
 - APK：`app/build/outputs/apk/debug/app-debug.apk`
 - 当前稳定版本化 APK：`dist/AimeSimulator-2.2.5-debug.apk`
 - 默认 HCE-F 机台实验 APK：`dist/AimeSimulator-2.2.9-default-hcef-card-debug.apk`
+- IDm 一致性实验 APK：`dist/AimeSimulator-2.2.10-matched-idm-probe-debug.apk`
 - KernelSU 模块：`dist/aimesim-pmm-ksu-v3.zip`
 
 `tools/check_artifacts.py` 会检查 APK 中的 libxposed API 101 元数据、静态作用域和 arm64 原生库，同时检查 KernelSU ZIP 的必要文件是否完整。版本化 APK 是发布交付副本；Gradle 默认仍输出 `app-debug.apk`。
@@ -388,4 +391,4 @@ Aime 及相关名称和标识属于其各自权利人。本项目是非官方兼
 
 ## English summary
 
-AimeSimulator is an Android HCE-F / FeliCa Lite profile manager and simulator. The 2.2.9 rootless experiment adds a separate default HCE-F card service with static System Code 4000 and the full selected-card image, alongside the dynamic and static 88B4 diagnostics. Version 2.2.5 remains the stable physical-card reader delivery. See the Chinese sections above for requirements, limitations, implementation references, and safety notes.
+AimeSimulator is an Android HCE-F / FeliCa Lite profile manager and simulator. The 2.2.10 compatibility experiment aligns the routed NFCID2 with the IDm prefix in block 82, while retaining the 2.2.9 generic 4000 and static 88B4 diagnostics. Version 2.2.5 remains the stable physical-card reader delivery. See the Chinese sections above for requirements, limitations, implementation references, and safety notes.

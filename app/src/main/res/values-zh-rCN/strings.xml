@@ -21,7 +21,7 @@
     <string name="open_repository">打开 GitHub 仓库</string>
     <string name="open_repository_failed">无法打开仓库链接。</string>
     <string name="compatibility_mode">兼容模式</string>
-    <string name="compatibility_mode_summary">对不接受动态卡号的设备使用固定 NFCID2；模拟数据仍来自当前选中的配置。</string>
+    <string name="compatibility_mode_summary">使用固定 NFCID2，并将 Block 82 中的 IDm 与路由值保持一致；其余模拟数据仍来自当前配置。</string>
     <string name="card_profiles">卡片配置</string>
     <string name="add_manually">手动添加</string>
     <string name="read_physical_card">读取卡片</string>

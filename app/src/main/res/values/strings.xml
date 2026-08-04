@@ -21,7 +21,7 @@
     <string name="open_repository">Open GitHub repository</string>
     <string name="open_repository_failed">The repository link could not be opened.</string>
     <string name="compatibility_mode">Compatibility mode</string>
-    <string name="compatibility_mode_summary">Uses a fixed NFCID2 for devices that reject dynamic card identifiers. The emulated data still comes from the selected profile.</string>
+    <string name="compatibility_mode_summary">Uses a fixed NFCID2 and keeps the IDm in block 82 aligned with it. All other emulated data still comes from the selected profile.</string>
     <string name="card_profiles">Card profiles</string>
     <string name="add_manually">Add manually</string>
     <string name="read_physical_card">Read card</string>

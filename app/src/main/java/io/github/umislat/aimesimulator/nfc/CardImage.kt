@@ -3,7 +3,10 @@ package io.github.umislat.aimesimulator.nfc
 import io.github.umislat.aimesimulator.data.CardProfile
 import io.github.umislat.aimesimulator.data.HexCodec
 
-internal class CardImage(profile: CardProfile) {
+internal class CardImage(
+    profile: CardProfile,
+    idBlockIdm: String = profile.idm
+) {
     private val blocks = HashMap<Int, ByteArray>()
 
     init {
@@ -23,7 +26,7 @@ internal class CardImage(profile: CardProfile) {
 
         blocks[0x00] = profile.spad0?.let { fixedBlock(it) } ?: ByteArray(16)
         val idBlock = profile.idBlock?.let { fixedBlock(it) } ?: ByteArray(16)
-        HexCodec.decode(profile.idm, 8)?.copyInto(idBlock, 0)
+        HexCodec.decode(idBlockIdm, 8)?.copyInto(idBlock, 0)
         blocks[0x82] = idBlock
     }
 

@@ -15,8 +15,9 @@ capture does not infer or save it, and it does not alter HCE-F registration or
 the emulated card image.
 
 Normal mode registers the profile IDm with Android. Compatibility mode registers
-`02FE001145141919` while retaining the profile IDm inside the emulated card image.
-The system code is `88B4`. The HCE-F service metadata statically declares the
+`02FE001145141919` and places the same routed IDm in the first eight bytes of block
+`82`; any captured trailing bytes in that block remain unchanged. The system code
+is `88B4`. The HCE-F service metadata statically declares the
 advertised PMm as `00F1000000014300`; supported Android NFC stacks use this value
 without a native PMm hook.
 
@@ -32,9 +33,10 @@ not modified. Unsupported commands return the four-byte compatibility response
 `04 11 45 14`. Malformed frames are ignored.
 
 The default card image contains zero-filled user blocks, an all-`FF` block `0E`,
-the selected profile IDm in block `82`, PMm metadata in block `83`, system code in
+the active routed IDm in block `82`, PMm metadata in block `83`, system code in
 block `85`, and fixed compatibility metadata in blocks `86` and `88`. Captured
-SPAD0 and ID-block values override their generated counterparts.
+SPAD0 and ID-block values supply their remaining data without overriding the
+routed IDm prefix.
 
 ## Physical-card reading
 

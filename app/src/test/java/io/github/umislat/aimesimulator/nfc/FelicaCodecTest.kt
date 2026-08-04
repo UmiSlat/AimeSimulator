@@ -29,6 +29,21 @@ class FelicaCodecTest {
         assertEquals("02FE123456789ABC", HexCodec.encode(decoded.blocks[1].copyOfRange(0, 8)))
     }
 
+    @Test fun compatibilityImageAlignsIdBlockWithRoutedIdm() {
+        val profile = requireNotNull(CardProfile.create(
+            "Captured",
+            "012E59399950733E",
+            idBlock = "012E59399950733E0078000000000000"
+        ))
+
+        val image = CardImage(profile, CardProfile.COMPATIBILITY_IDM)
+
+        assertEquals(
+            "02FE0011451419190078000000000000",
+            HexCodec.encode(image.read(0x82))
+        )
+    }
+
     @Test fun rejectsTruncatedFrame() {
         val request = FelicaCodec.readRequest(idm, intArrayOf(0x00)).copyOf(15)
         assertFalse(FelicaCodec.decodeRequest(request) != null)
