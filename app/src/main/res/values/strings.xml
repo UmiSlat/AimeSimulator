@@ -98,7 +98,7 @@
     <string name="access_code_card_unsupported">A card was detected, but it is neither a readable Amusement IC nor a MIFARE Classic Aime card.</string>
     <string name="rootless_check">Rootless compatibility</string>
     <string name="rootless_check_88b4">Check 88B4</string>
-    <string name="rootless_test_4000">Test generic 4000 HCE-F</string>
+    <string name="rootless_test_4000">Enable default HCE-F card (4000)</string>
     <string name="rootless_test_static_88b4">Test static 88B4</string>
     <string name="rootless_profile_required_title">Card profile required</string>
     <string name="rootless_profile_required_detail">Add and select a profile to test HCE-F registration with it. The check never writes to a physical card.</string>
@@ -122,13 +122,13 @@
     <string name="rootless_error_title">Check failed unexpectedly</string>
     <string name="rootless_error_detail">The NFC system returned: %1$s</string>
     <string name="rootless_unknown_error">Unknown error</string>
-    <string name="generic_hcef_idle">You can explicitly enable System Code 4000 to verify HCE-F and PMm from this app. AIME readers cannot use this diagnostic mode.</string>
-    <string name="generic_hcef_active">Generic 4000 HCE-F diagnostic active</string>
-    <string name="generic_hcef_ready">Scan now with HINATA. Expect IDm %1$s, System Code 4000, and PMm %2$s. Any other values belong to a different NFC-F endpoint.</string>
-    <string name="generic_hcef_failed">Generic 4000 HCE-F diagnostic failed: %1$s</string>
-    <string name="generic_hcef_id_rejected">Android rejected the fixed 02FE compatibility IDm, so the generic 4000 check cannot continue.</string>
-    <string name="generic_hcef_system_code_rejected">Android rejected even the standard diagnostic value 4000, indicating an additional HCE-F restriction on this device.</string>
-    <string name="generic_hcef_enable_failed">The IDm and 4000 were registered, but Android could not enable the foreground HCE-F service.</string>
+    <string name="generic_hcef_idle">A separate service can emulate the selected card using only static, Android-compatible HCE-F metadata. It does not dynamically register an IDm or System Code.</string>
+    <string name="generic_hcef_active">Default 4000 HCE-F card emulation active</string>
+    <string name="generic_hcef_ready">The selected card image is active. Keep this app in the foreground for the cabinet test. Expected IDm: %1$s; System Code: 4000; PMm: %2$s. A reader polling only 88B4 still cannot discover it.</string>
+    <string name="generic_hcef_failed">Default HCE-F card emulation failed: %1$s</string>
+    <string name="generic_hcef_id_rejected">Android removed or replaced the static 02FE IDm of the default HCE-F card service.</string>
+    <string name="generic_hcef_system_code_rejected">Android removed or replaced System Code 4000 of the default HCE-F card service.</string>
+    <string name="generic_hcef_enable_failed">Android retained the default IDm and 4000 but could not enable the foreground card service.</string>
     <string name="static_hcef_idle">The static XML probe tests whether Android keeps an 88B4 service without dynamic system-code registration.</string>
     <string name="static_hcef_active">Static XML 88B4 diagnostic active</string>
     <string name="static_hcef_ready">Android retained the static service. Scan now with HINATA and expect IDm %1$s, System Code 88B4, and PMm %2$s.</string>
@@ -160,6 +160,7 @@
     <string name="state_inactive">Inactive</string>
     <string name="hcef_service_description">Aime FeliCa profile service</string>
     <string name="hcef_static_probe_description">Static Aime 88B4 diagnostic service</string>
+    <string name="hcef_default_card_description">Default 4000 HCE-F card service</string>
     <string name="default_nfc_service_description">AimeSimulator default NFC app helper</string>
     <string name="xposed_description">Allows dynamic NFC-F identifiers and applies the optional PMm compatibility value.</string>
 </resources>

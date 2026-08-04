@@ -47,3 +47,5 @@ open class AimeHostService : HostNfcFService() {
 }
 
 class StaticAimeHostService : AimeHostService()
+
+class DefaultHcefCardService : AimeHostService()

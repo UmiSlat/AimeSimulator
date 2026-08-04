@@ -60,11 +60,11 @@ class MainActivity : AppCompatActivity() {
     private var cardPageStatusView: TextView? = null
     private var statusPageStatusView: TextView? = null
     private var lastHceReport: HceSession.Report? = null
-    private var genericDiagnosticReport: HceSession.Report? = null
+    private var defaultHcefReport: HceSession.Report? = null
     private var staticDiagnosticReport: HceSession.Report? = null
     private var rootlessStatusView: TextView? = null
     private var rootlessDetailView: TextView? = null
-    private var genericDiagnosticStatusView: TextView? = null
+    private var defaultHcefStatusView: TextView? = null
     private var staticDiagnosticStatusView: TextView? = null
 
     private var pmmSnapshot: PmmManager.Snapshot? = null
@@ -161,7 +161,7 @@ class MainActivity : AppCompatActivity() {
         statusPageStatusView = null
         rootlessStatusView = null
         rootlessDetailView = null
-        genericDiagnosticStatusView = null
+        defaultHcefStatusView = null
         staticDiagnosticStatusView = null
         pmmSwitch = null
         pmmStatus = null
@@ -408,12 +408,12 @@ class MainActivity : AppCompatActivity() {
                 setPadding(0, dp(6), 0, dp(8))
             }
             addView(rootlessDetailView)
-            genericDiagnosticStatusView = TextView(this@MainActivity).apply {
+            defaultHcefStatusView = TextView(this@MainActivity).apply {
                 textSize = 13f
                 alpha = 0.76f
                 setPadding(0, dp(4), 0, dp(10))
             }
-            addView(genericDiagnosticStatusView)
+            addView(defaultHcefStatusView)
             staticDiagnosticStatusView = TextView(this@MainActivity).apply {
                 textSize = 13f
                 alpha = 0.76f
@@ -434,7 +434,7 @@ class MainActivity : AppCompatActivity() {
                 com.google.android.material.R.attr.materialButtonOutlinedStyle
             ).apply {
                 setText(R.string.rootless_test_4000)
-                setOnClickListener { activateGenericDiagnostic() }
+                setOnClickListener { activateDefaultHcefCard() }
             }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6) })
             addView(MaterialButton(
                 this@MainActivity,
@@ -720,7 +720,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun activateSelected(attempt: Int = 0) {
         cancelActivationRetry()
-        genericDiagnosticReport = null
+        defaultHcefReport = null
         staticDiagnosticReport = null
         val selected = store.selectedProfile()
         if (selected == null) {
@@ -750,23 +750,17 @@ class MainActivity : AppCompatActivity() {
         renderRootlessAssessment()
     }
 
-    private fun activateGenericDiagnostic() {
+    private fun activateDefaultHcefCard() {
         cancelActivationRetry()
         staticDiagnosticReport = null
-        val selected = store.selectedProfile()
-        if (selected == null) {
-            genericDiagnosticReport = null
+        if (store.selectedProfile() == null) {
+            defaultHcefReport = null
             setHceStatus(getString(R.string.select_or_add_card))
             renderDiagnosticReports()
             return
         }
-        val report = session.activate(
-            this,
-            selected,
-            compatibilityMode = true,
-            systemCode = HceSession.GENERIC_SYSTEM_CODE
-        )
-        genericDiagnosticReport = report
+        val report = session.activateDefaultHcefCard(this)
+        defaultHcefReport = report
         setHceStatus(
             if (report.succeeded) getString(R.string.generic_hcef_active)
             else getString(R.string.generic_hcef_failed, report.detail)
@@ -776,7 +770,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun activateStaticAimeDiagnostic() {
         cancelActivationRetry()
-        genericDiagnosticReport = null
+        defaultHcefReport = null
         val report = session.activateStaticAimeDiagnostic(this)
         staticDiagnosticReport = report
         setHceStatus(
@@ -837,13 +831,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderDiagnosticReports() {
-        renderGenericDiagnostic()
+        renderDefaultHcefCard()
         renderStaticDiagnostic()
     }
 
-    private fun renderGenericDiagnostic() {
-        val report = genericDiagnosticReport
-        genericDiagnosticStatusView?.text = when (report?.stage) {
+    private fun renderDefaultHcefCard() {
+        val report = defaultHcefReport
+        defaultHcefStatusView?.text = when (report?.stage) {
             null -> getString(R.string.generic_hcef_idle)
             HceSession.Stage.READY -> getString(
                 R.string.generic_hcef_ready,

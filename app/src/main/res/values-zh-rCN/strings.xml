@@ -97,7 +97,7 @@
     <string name="access_code_card_unsupported">已检测到卡片，但它既不是可读取的 Amusement IC，也不是 MIFARE Classic Aime 卡。</string>
     <string name="rootless_check">无 Root 兼容性</string>
     <string name="rootless_check_88b4">检测 88B4</string>
-    <string name="rootless_test_4000">测试 4000 通用 HCE-F</string>
+    <string name="rootless_test_4000">启用默认 HCE-F 卡片（4000）</string>
     <string name="rootless_test_static_88b4">测试静态 88B4</string>
     <string name="rootless_profile_required_title">需要卡片配置</string>
     <string name="rootless_profile_required_detail">添加并选中一张配置后，应用会使用它检测 HCE-F 注册。检测不会写入实体卡。</string>
@@ -121,13 +121,13 @@
     <string name="rootless_error_title">检测发生异常</string>
     <string name="rootless_error_detail">NFC 系统返回：%1$s</string>
     <string name="rootless_unknown_error">未知错误</string>
-    <string name="generic_hcef_idle">可显式启用 System Code 4000 来核对本应用的 HCE-F 与 PMm；该模式不能供 AIME 读卡端使用。</string>
-    <string name="generic_hcef_active">4000 通用 HCE-F 诊断已启用</string>
-    <string name="generic_hcef_ready">现在用 HINATA 扫描，预期 IDm 为 %1$s、System Code 为 4000、PMm 为 %2$s。若不是这组值，扫描到的是其他 NFC-F 端点。</string>
-    <string name="generic_hcef_failed">4000 通用 HCE-F 诊断失败：%1$s</string>
-    <string name="generic_hcef_id_rejected">系统拒绝了固定的 02FE 兼容 IDm，无法继续 4000 通用诊断。</string>
-    <string name="generic_hcef_system_code_rejected">系统连标准诊断值 4000 都拒绝，设备的 HCE-F 实现存在额外限制。</string>
-    <string name="generic_hcef_enable_failed">IDm 与 4000 已注册，但 Android 未能启用前台 HCE-F 服务。</string>
+    <string name="generic_hcef_idle">可使用独立服务，仅凭 Android 允许的静态 HCE-F 元数据模拟当前卡片；该服务不会动态注册 IDm 或 System Code。</string>
+    <string name="generic_hcef_active">默认 4000 HCE-F 卡片模拟已启用</string>
+    <string name="generic_hcef_ready">当前卡片镜像已启用。前往机台测试时请保持本应用位于前台。预期 IDm：%1$s；System Code：4000；PMm：%2$s。仅轮询 88B4 的读卡器仍无法发现该服务。</string>
+    <string name="generic_hcef_failed">默认 HCE-F 卡片模拟失败：%1$s</string>
+    <string name="generic_hcef_id_rejected">Android 移除或替换了默认 HCE-F 卡片服务的静态 02FE IDm。</string>
+    <string name="generic_hcef_system_code_rejected">Android 移除或替换了默认 HCE-F 卡片服务的 System Code 4000。</string>
+    <string name="generic_hcef_enable_failed">Android 保留了默认 IDm 与 4000，但未能启用前台卡片服务。</string>
     <string name="static_hcef_idle">静态 XML 探针用于检测 Android 能否在不动态注册 System Code 的情况下保留 88B4 服务。</string>
     <string name="static_hcef_active">静态 XML 88B4 诊断已启用</string>
     <string name="static_hcef_ready">Android 已保留静态服务。现在用 HINATA 扫描，预期 IDm 为 %1$s、System Code 为 88B4、PMm 为 %2$s。</string>
@@ -159,6 +159,7 @@
     <string name="state_inactive">未启用</string>
     <string name="hcef_service_description">Aime FeliCa 配置服务</string>
     <string name="hcef_static_probe_description">静态 Aime 88B4 诊断服务</string>
+    <string name="hcef_default_card_description">默认 4000 HCE-F 卡片服务</string>
     <string name="default_nfc_service_description">AimeSimulator 默认 NFC 应用辅助服务</string>
     <string name="xposed_description">允许动态 NFC-F 标识符，并可应用 PMm 兼容值。</string>
 </resources>
