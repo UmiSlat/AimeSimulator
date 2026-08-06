@@ -243,12 +243,12 @@ async function pollSystemCode(systemCode) {
   return parseFelicaPollResponse(response.payload);
 }
 
-async function readAimeBlocks(target) {
-  const command = buildFelicaReadWithoutEncryption(target.idm, [0x00, 0x82, 0x85]);
+async function readAimeBlockGroup(target, blocks) {
+  const command = buildFelicaReadWithoutEncryption(target.idm, blocks);
   const response = await exchangePn532(
     PN532_COMMAND_IN_DATA_EXCHANGE,
     [target.targetNumber, ...command],
-    "READ 000B:00,82,85",
+    `READ 000B:${blocks.map((block) => formatHex([block])).join(",")}`,
   );
   const parsed = parseFelicaReadResponse(response.payload);
   if (parsed.statusFlag1 !== 0 || parsed.statusFlag2 !== 0) {
@@ -256,7 +256,18 @@ async function readAimeBlocks(target) {
       `FeliCa status ${formatHex([parsed.statusFlag1, parsed.statusFlag2], " ")}`,
     );
   }
-  return parsed;
+  if (parsed.blockData.length !== blocks.length) {
+    throw new Error(`Expected ${blocks.length} FeliCa blocks, received ${parsed.blockData.length}`);
+  }
+  return parsed.blockData;
+}
+
+async function readAimeBlocks(target) {
+  // An E2 HID report carries only 63 PN532 bytes. Three blocks need 71 bytes,
+  // so keep each response below the transport limit and merge them here.
+  const firstPair = await readAimeBlockGroup(target, [0x00, 0x82]);
+  const systemCodeBlock = await readAimeBlockGroup(target, [0x85]);
+  return { blockData: [...firstPair, ...systemCodeBlock] };
 }
 
 function probeElement(code) {

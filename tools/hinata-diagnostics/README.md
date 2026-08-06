@@ -36,7 +36,9 @@ secure contexts by Chrome; opening `index.html` directly is not supported.
 
 The complete run uses PN532 `InListPassiveTarget` at 212 kbps with Request Code
 `01`, then reads blocks `00`, `82`, and `85` from service `000B` for each discovered
-target. Raw HINATA `E2`/PN532 frames are retained in the exported report.
+target. Blocks `00`/`82` and `85` use separate reads because one HINATA `E2` HID
+report cannot carry the 71-byte PN532 response produced by a three-block read.
+Raw HINATA `E2`/PN532 frames are retained in the exported report.
 
 ## Local maimai limitation
 

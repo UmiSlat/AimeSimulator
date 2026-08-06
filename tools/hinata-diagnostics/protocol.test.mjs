@@ -62,6 +62,19 @@ test("parses a three-block Read Without Encryption response", () => {
   assert.equal(formatHex(parsed.blockData[2]), "40000000000000000000000000000000");
 });
 
+test("keeps split block reads within one HINATA E2 HID report", () => {
+  const idm = [0x02, 0xfe, 0x00, 0x11, 0x45, 0x14, 0x19, 0x19];
+  const responseFrameLength = (blockCount) => {
+    const felica = [13 + blockCount * 16, 0x07, ...idm, 0x00, 0x00, blockCount];
+    for (let index = 0; index < blockCount * 16; index += 1) felica.push(0x00);
+    return buildPn532Frame(PN532_DIRECTION_CHIP_TO_HOST, 0x41, [0x00, ...felica]).length;
+  };
+
+  assert.equal(responseFrameLength(3), 71);
+  assert.ok(responseFrameLength(2) <= 63);
+  assert.ok(responseFrameLength(1) <= 63);
+});
+
 test("validates PN532 checksums", () => {
   const frame = buildPn532Frame(PN532_DIRECTION_CHIP_TO_HOST, 0x4b, [0x00]);
   frame[frame.length - 2] ^= 0x01;
