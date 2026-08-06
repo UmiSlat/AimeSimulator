@@ -29,18 +29,27 @@ class FelicaCodecTest {
         assertEquals("02FE123456789ABC", HexCodec.encode(decoded.blocks[1].copyOfRange(0, 8)))
     }
 
-    @Test fun compatibilityImageAlignsIdBlockWithRoutedIdm() {
+    @Test fun genericImageAlignsSystemCodeBlock() {
         val profile = requireNotNull(CardProfile.create(
             "Captured",
             "012E59399950733E",
             idBlock = "012E59399950733E0078000000000000"
         ))
 
-        val image = CardImage(profile, CardProfile.COMPATIBILITY_IDM)
+        val aimeImage = CardImage(profile)
+        val genericImage = CardImage(profile, HceSession.GENERIC_SYSTEM_CODE)
 
         assertEquals(
-            "02FE0011451419190078000000000000",
-            HexCodec.encode(image.read(0x82))
+            "012E59399950733E0078000000000000",
+            HexCodec.encode(genericImage.read(0x82))
+        )
+        assertEquals(
+            "88B40000000000000000000000000000",
+            HexCodec.encode(aimeImage.read(0x85))
+        )
+        assertEquals(
+            "40000000000000000000000000000000",
+            HexCodec.encode(genericImage.read(0x85))
         )
     }
 

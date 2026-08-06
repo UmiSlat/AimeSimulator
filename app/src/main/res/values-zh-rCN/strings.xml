@@ -21,7 +21,7 @@
     <string name="open_repository">打开 GitHub 仓库</string>
     <string name="open_repository_failed">无法打开仓库链接。</string>
     <string name="compatibility_mode">兼容模式</string>
-    <string name="compatibility_mode_summary">使用固定 NFCID2，并将 Block 82 中的 IDm 与路由值保持一致；其余模拟数据仍来自当前配置。</string>
+    <string name="compatibility_mode_summary">对不接受动态卡号的设备使用固定 NFCID2；模拟数据仍来自当前选中的配置。</string>
     <string name="card_profiles">卡片配置</string>
     <string name="add_manually">手动添加</string>
     <string name="read_physical_card">读取卡片</string>
@@ -123,7 +123,7 @@
     <string name="rootless_unknown_error">未知错误</string>
     <string name="generic_hcef_idle">可使用独立服务，仅凭 Android 允许的静态 HCE-F 元数据模拟当前卡片；该服务不会动态注册 IDm 或 System Code。</string>
     <string name="generic_hcef_active">默认 4000 HCE-F 卡片模拟已启用</string>
-    <string name="generic_hcef_ready">当前卡片镜像已启用。前往机台测试时请保持本应用位于前台。预期 IDm：%1$s；System Code：4000；PMm：%2$s。仅轮询 88B4 的读卡器仍无法发现该服务。</string>
+    <string name="generic_hcef_ready">当前卡片镜像已启用。预期 IDm：%1$s；RF 与 Block 85 System Code：4000；PMm：%2$s。请保持应用位于前台；本模式仅用于确认机台是否接受内部一致的 4000 卡片。</string>
     <string name="generic_hcef_failed">默认 HCE-F 卡片模拟失败：%1$s</string>
     <string name="generic_hcef_id_rejected">Android 移除或替换了默认 HCE-F 卡片服务的静态 02FE IDm。</string>
     <string name="generic_hcef_system_code_rejected">Android 移除或替换了默认 HCE-F 卡片服务的 System Code 4000。</string>

@@ -5,7 +5,7 @@ import io.github.umislat.aimesimulator.data.HexCodec
 
 internal class CardImage(
     profile: CardProfile,
-    idBlockIdm: String = profile.idm
+    systemCode: String = HceSession.SYSTEM_CODE
 ) {
     private val blocks = HashMap<Int, ByteArray>()
 
@@ -16,7 +16,7 @@ internal class CardImage(
         blocks[0x81] = ByteArray(16)
         blocks[0x83] = fixedBlock("000000000000000000F1000000014300")
         blocks[0x84] = fixedBlock("0000")
-        blocks[0x85] = fixedBlock("88B4")
+        blocks[0x85] = fixedBlock(systemCode)
         blocks[0x86] = fixedBlock("0001")
         blocks[0x87] = ByteArray(16)
         blocks[0x88] = fixedBlock("FE7F000007011E00FF41FF4101")
@@ -26,7 +26,7 @@ internal class CardImage(
 
         blocks[0x00] = profile.spad0?.let { fixedBlock(it) } ?: ByteArray(16)
         val idBlock = profile.idBlock?.let { fixedBlock(it) } ?: ByteArray(16)
-        HexCodec.decode(idBlockIdm, 8)?.copyInto(idBlock, 0)
+        HexCodec.decode(profile.idm, 8)?.copyInto(idBlock, 0)
         blocks[0x82] = idBlock
     }
 

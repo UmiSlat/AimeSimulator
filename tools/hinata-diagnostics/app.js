@@ -244,11 +244,11 @@ async function pollSystemCode(systemCode) {
 }
 
 async function readAimeBlocks(target) {
-  const command = buildFelicaReadWithoutEncryption(target.idm, [0x00, 0x82]);
+  const command = buildFelicaReadWithoutEncryption(target.idm, [0x00, 0x82, 0x85]);
   const response = await exchangePn532(
     PN532_COMMAND_IN_DATA_EXCHANGE,
     [target.targetNumber, ...command],
-    "READ 000B:00,82",
+    "READ 000B:00,82,85",
   );
   const parsed = parseFelicaReadResponse(response.payload);
   if (parsed.statusFlag1 !== 0 || parsed.statusFlag2 !== 0) {
@@ -293,6 +293,7 @@ function renderProbe(code, result) {
   );
   setField(card, "block0", result?.read?.blocks?.["00"] ?? "-");
   setField(card, "block82", result?.read?.blocks?.["82"] ?? "-");
+  setField(card, "block85", result?.read?.blocks?.["85"] ?? "-");
   setField(
     card,
     "detail",
@@ -338,6 +339,7 @@ async function runProbe(systemCode, { cardCode = systemCode, readBlocks = true }
             blocks: {
               "00": read.blockData[0] ? formatHex(read.blockData[0]) : "-",
               "82": read.blockData[1] ? formatHex(read.blockData[1]) : "-",
+              "85": read.blockData[2] ? formatHex(read.blockData[2]) : "-",
             },
           };
         } catch (error) {

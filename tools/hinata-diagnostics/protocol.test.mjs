@@ -41,23 +41,25 @@ test("parses a FeliCa target with one returned System Code", () => {
   assert.deepEqual(target.systemCodes, [0x4000]);
 });
 
-test("builds a little-endian 000B read for blocks 00 and 82", () => {
+test("builds a little-endian 000B read for blocks 00, 82, and 85", () => {
   const command = buildFelicaReadWithoutEncryption(
     [0x02, 0xfe, 0x00, 0x11, 0x45, 0x14, 0x19, 0x19],
-    [0x00, 0x82],
+    [0x00, 0x82, 0x85],
   );
-  assert.equal(formatHex(command), "120602FE001145141919010B000280008082");
+  assert.equal(formatHex(command), "140602FE001145141919010B0003800080828085");
 });
 
-test("parses a two-block Read Without Encryption response", () => {
+test("parses a three-block Read Without Encryption response", () => {
   const idm = [0x02, 0xfe, 0x00, 0x11, 0x45, 0x14, 0x19, 0x19];
   const block0 = Array.from({ length: 16 }, (_, index) => index);
   const block82 = [...idm, ...Array(8).fill(0xaa)];
-  const felica = [0x2d, 0x07, ...idm, 0x00, 0x00, 0x02, ...block0, ...block82];
+  const block85 = [0x40, 0x00, ...Array(14).fill(0x00)];
+  const felica = [0x3d, 0x07, ...idm, 0x00, 0x00, 0x03, ...block0, ...block82, ...block85];
   const parsed = parseFelicaReadResponse([0x00, ...felica]);
   assert.equal(parsed.statusFlag1, 0);
   assert.equal(formatHex(parsed.blockData[0]), "000102030405060708090A0B0C0D0E0F");
   assert.equal(formatHex(parsed.blockData[1]), "02FE001145141919AAAAAAAAAAAAAAAA");
+  assert.equal(formatHex(parsed.blockData[2]), "40000000000000000000000000000000");
 });
 
 test("validates PN532 checksums", () => {

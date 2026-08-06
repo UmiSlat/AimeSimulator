@@ -31,11 +31,11 @@ secure contexts by Chrome; opening `index.html` directly is not supported.
 | `FFFF` responds | The phone is visible to wildcard 212 kbps FeliCa polling. |
 | `88B4` responds | The phone is discoverable under the Aime System Code. |
 | `4000` responds, `88B4` does not | Android generic HCE-F works, but this does not match an Aime cabinet poll. |
-| Blocks `00` and `82` are read | Polling advanced to service `000B` Read Without Encryption. |
+| Blocks `00`, `82`, and `85` are read | Polling advanced to service `000B`; block `85` exposes the card-image System Code. |
 | Poll responds but block reads fail | System Code routing works; the HCE service command path does not. |
 
 The complete run uses PN532 `InListPassiveTarget` at 212 kbps with Request Code
-`01`, then reads blocks `00` and `82` from service `000B` for each discovered
+`01`, then reads blocks `00`, `82`, and `85` from service `000B` for each discovered
 target. Raw HINATA `E2`/PN532 frames are retained in the exported report.
 
 ## Local maimai limitation

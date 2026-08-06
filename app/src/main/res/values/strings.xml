@@ -21,7 +21,7 @@
     <string name="open_repository">Open GitHub repository</string>
     <string name="open_repository_failed">The repository link could not be opened.</string>
     <string name="compatibility_mode">Compatibility mode</string>
-    <string name="compatibility_mode_summary">Uses a fixed NFCID2 and keeps the IDm in block 82 aligned with it. All other emulated data still comes from the selected profile.</string>
+    <string name="compatibility_mode_summary">Uses a fixed NFCID2 for devices that reject dynamic card identifiers. The emulated data still comes from the selected profile.</string>
     <string name="card_profiles">Card profiles</string>
     <string name="add_manually">Add manually</string>
     <string name="read_physical_card">Read card</string>
@@ -124,7 +124,7 @@
     <string name="rootless_unknown_error">Unknown error</string>
     <string name="generic_hcef_idle">A separate service can emulate the selected card using only static, Android-compatible HCE-F metadata. It does not dynamically register an IDm or System Code.</string>
     <string name="generic_hcef_active">Default 4000 HCE-F card emulation active</string>
-    <string name="generic_hcef_ready">The selected card image is active. Keep this app in the foreground for the cabinet test. Expected IDm: %1$s; System Code: 4000; PMm: %2$s. A reader polling only 88B4 still cannot discover it.</string>
+    <string name="generic_hcef_ready">The selected image is active. Expected IDm: %1$s; RF and block 85 System Code: 4000; PMm: %2$s. Keep the app foreground. This mode only tests whether the cabinet accepts an internally consistent 4000 card.</string>
     <string name="generic_hcef_failed">Default HCE-F card emulation failed: %1$s</string>
     <string name="generic_hcef_id_rejected">Android removed or replaced the static 02FE IDm of the default HCE-F card service.</string>
     <string name="generic_hcef_system_code_rejected">Android removed or replaced System Code 4000 of the default HCE-F card service.</string>

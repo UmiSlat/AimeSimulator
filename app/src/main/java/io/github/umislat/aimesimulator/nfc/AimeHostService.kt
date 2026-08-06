@@ -8,18 +8,12 @@ import io.github.umislat.aimesimulator.data.CardProfile
 import io.github.umislat.aimesimulator.data.CardStore
 
 open class AimeHostService : HostNfcFService() {
-    protected open val alignIdBlockWithRoutedIdm: Boolean = true
+    protected open val imageSystemCode: String = HceSession.SYSTEM_CODE
 
     override fun processNfcFPacket(commandPacket: ByteArray, extras: Bundle?): ByteArray? {
         val request = FelicaCodec.decodeRequest(commandPacket) ?: return null
-        val store = CardStore(this)
-        val profile = store.selectedProfile() ?: CardProfile.fallback()
-        val idBlockIdm = if (alignIdBlockWithRoutedIdm) {
-            profile.routedIdm(store.compatibilityMode())
-        } else {
-            profile.idm
-        }
-        val image = CardImage(profile, idBlockIdm)
+        val profile = CardStore(this).selectedProfile() ?: CardProfile.fallback()
+        val image = CardImage(profile, imageSystemCode)
 
         val response = when (request.command) {
             FelicaCodec.READ_COMMAND -> {
@@ -54,10 +48,8 @@ open class AimeHostService : HostNfcFService() {
     }
 }
 
-class StaticAimeHostService : AimeHostService() {
-    override val alignIdBlockWithRoutedIdm: Boolean = false
-}
+class StaticAimeHostService : AimeHostService()
 
 class DefaultHcefCardService : AimeHostService() {
-    override val alignIdBlockWithRoutedIdm: Boolean = false
+    override val imageSystemCode: String = HceSession.GENERIC_SYSTEM_CODE
 }
