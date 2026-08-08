@@ -17,7 +17,7 @@ AimeSimulator 是一个面向 Android 的 NFC-F / FeliCa Lite 卡片配置管理
 | 通用 `4000` | 仅用于 HCE-F 注册和机台互操作诊断，不是已验证可用的无 Root Aime 回退方案 |
 | 旧式 MIFARE Aime 读取 | 代码与单元测试已完成，尚无旧式 Aime 实卡完成物理验证 |
 
-GitHub Actions 会为分支和 Pull Request 构建测试 APK Artifact。只有带固定签名并由版本标签触发的 APK 才会进入 [GitHub Releases](https://github.com/UmiSlat/AimeSimulator/releases)；实验结果与可安装稳定版不会混为同一状态。
+GitHub 托管构建与 Release 只服务正式 `main`；本实验分支仅在本地构建 APK，不上传 Actions Artifact，也不使用版本标签发布。
 
 ## 快速开始（无 Root）
 
@@ -369,38 +369,9 @@ python tools\check_artifacts.py
 
 `tools/check_artifacts.py` 会检查 APK 中的 libxposed API 101 元数据、静态作用域和 arm64 原生库，同时检查 KernelSU ZIP 的必要文件是否完整。版本化 APK 是发布交付副本；Gradle 默认仍输出 `app-debug.apk`。
 
-### GitHub 托管构建与发布
+### 实验版本构建
 
-仓库包含两套 GitHub Actions 工作流：
-
-- `Android CI`：在 `main`、`codex/**`、Pull Request 或手动触发时运行单元测试、lint、HINATA 协议测试、debug APK 构建、KernelSU 模块打包与产物检查，并保留 30 天的测试 APK Artifact。
-- `Android Release`：在推送 `v版本号` 标签时构建固定签名的 release APK，验证签名与 SHA-256，并创建或更新对应的 GitHub Release。
-
-Actions 中的 debug Artifact 只用于测试。GitHub 托管运行器生成的 debug 签名不保证跨构建保持一致，安装另一轮 Artifact 时可能需要先卸载旧包；正式分发必须使用 `Android Release` 的固定签名。
-
-发布前，在仓库 `Settings > Secrets and variables > Actions` 配置以下 Repository secrets：
-
-| Secret | 内容 |
-| --- | --- |
-| `ANDROID_SIGNING_KEY` | JKS/PKCS12 签名库文件的 Base64 内容 |
-| `ANDROID_KEY_STORE_PASSWORD` | 签名库密码 |
-| `ANDROID_KEY_ALIAS` | 签名密钥别名 |
-| `ANDROID_KEY_PASSWORD` | 签名密钥密码 |
-
-签名库必须在 GitHub 之外另行安全备份；丢失后将无法为已安装版本提供可直接升级的 APK。PowerShell 可使用以下命令把已有签名库编码后复制到剪贴板：
-
-```powershell
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("aimesimulator-release.jks")) | Set-Clipboard
-```
-
-四个 Secrets 配置完成后，先让 `versionName` 与标签保持一致，再触发发布：
-
-```bash
-git tag v2.2.11
-git push origin v2.2.11
-```
-
-工作流会拒绝标签与 `versionName` 不一致、签名 Secrets 缺失或 APK 签名校验失败的发布。
+本分支的 `2.2.8` 至 `2.2.11` APK 仅使用上方本地命令构建，并保存在 Git 忽略的 `dist/` 中。不要为实验版本创建发布标签；正式主线的 GitHub Actions 与固定签名发布说明以 [`main` README](https://github.com/UmiSlat/AimeSimulator/blob/main/README.md) 为准。
 
 ## 项目结构
 
@@ -413,7 +384,6 @@ app/
 ├─ src/main/java/.../ui/     原生 Android 界面
 └─ src/main/cpp/             PMm Hook 与 Android 15+ HAL 注入器
 ksu-module/                  KernelSU 模块脚本和元数据
-.github/workflows/           GitHub 托管 CI 与签名发布工作流
 tools/                       HINATA 诊断、模块打包与产物校验工具
 docs/FUNCTIONAL_SPEC.md      可观察行为与协议约定
 THIRD_PARTY_NOTICES.md       第三方依赖及其许可证
@@ -439,4 +409,4 @@ Aime 及相关名称和标识属于其各自权利人。本项目是非官方兼
 
 ## English summary
 
-AimeSimulator is an Android HCE-F / FeliCa Lite profile manager and simulator. Version 2.2.5 remains the stable delivery. The 2.2.11 experiment aligns the generic service's RF System Code 4000 with block 85 and has been verified with HINATA, but its final cabinet retest is still pending. GitHub Actions builds test artifacts on branches and publishes fixed-signature APKs from matching version tags. See the Chinese sections above for requirements, limitations, implementation references, and safety notes.
+AimeSimulator is an Android HCE-F / FeliCa Lite profile manager and simulator. Version 2.2.5 remains the stable delivery. The 2.2.11 experiment aligns the generic service's RF System Code 4000 with block 85 and has been verified with HINATA, but its final cabinet retest is still pending. Experimental APKs are built locally only; hosted builds and signed releases belong to the stable main branch. See the Chinese sections above for requirements, limitations, implementation references, and safety notes.
