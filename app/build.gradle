@@ -2,6 +2,18 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
 }
+
+def releaseKeystoreFile = System.getenv('AIMESIM_RELEASE_KEYSTORE')
+def releaseKeystorePassword = System.getenv('AIMESIM_RELEASE_STORE_PASSWORD')
+def releaseKeyAlias = System.getenv('AIMESIM_RELEASE_KEY_ALIAS')
+def releaseKeyPassword = System.getenv('AIMESIM_RELEASE_KEY_PASSWORD')
+def hasReleaseSigning = [
+    releaseKeystoreFile,
+    releaseKeystorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword,
+].every { value -> value != null && !value.isBlank() }
+
 android {
     namespace 'io.github.umislat.aimesimulator'
     compileSdk 34
@@ -22,8 +34,22 @@ android {
         }
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            release {
+                storeFile file(releaseKeystoreFile)
+                storePassword releaseKeystorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }

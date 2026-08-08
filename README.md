@@ -7,9 +7,21 @@ AimeSimulator 是一个面向 Android 的 NFC-F / FeliCa Lite 卡片配置管理
 > [!WARNING]
 > 本项目会使用 HCE-F、LSPosed Hook、Root 命令和厂商 NFC HAL 注入。请仅在自己拥有或获准测试的设备与卡片上使用，并提前准备可恢复系统的手段。项目不保证兼容任何具体商业设备或服务。
 
+## 发布与验证状态
+
+| 项目 | 当前状态 |
+| --- | --- |
+| 稳定线 | `main` / `2.2.5`，作为当前稳定交付版本 |
+| 实验线 | `2.2.11` 已由 HINATA 确认 RF System Code 与 Block `85` 均为 `4000`，尚待最终机台复测 |
+| 无 Root `88B4` | 取决于设备和 ROM；已测试的 Xiaomi 15 Pro / Android 16 会拒绝动态 NFCID2，不能视为已支持 |
+| 通用 `4000` | 仅用于 HCE-F 注册和机台互操作诊断，不是已验证可用的无 Root Aime 回退方案 |
+| 旧式 MIFARE Aime 读取 | 代码与单元测试已完成，尚无旧式 Aime 实卡完成物理验证 |
+
+GitHub Actions 会为分支和 Pull Request 构建测试 APK Artifact。只有带固定签名并由版本标签触发的 APK 才会进入 [GitHub Releases](https://github.com/UmiSlat/AimeSimulator/releases)；实验结果与可安装稳定版不会混为同一状态。
+
 ## 快速开始（无 Root）
 
-1. 从 [GitHub Releases](https://github.com/UmiSlat/AimeSimulator/releases) 安装最新 APK。
+1. 从 [GitHub Releases](https://github.com/UmiSlat/AimeSimulator/releases) 安装标记为稳定的 APK；实验 APK 只用于其说明中列出的验证项目。
 2. 打开应用，在 Android 系统界面中确认是否将 AimeSimulator 设为默认 NFC 应用。
 3. 在“卡片”页选择“手动添加”或“读取卡片”，检查字段后保存配置。
 4. 选中要使用的配置；首次尝试建议保持 PMm 补丁关闭。
@@ -28,7 +40,7 @@ AimeSimulator 是一个面向 Android 的 NFC-F / FeliCa Lite 卡片配置管理
 - 支持手动填写或从支持的实体卡读取 Access Code、IDm、S_PAD0 和 ID 块。
 - 使用单一“读取卡片”入口自动识别 Amusement IC、普通 FeliCa 和旧式 MIFARE Aime。
 - Amusement IC 可读取 IDm、加密 S_PAD0、ID 块并解密得到 Access Code。
-- 普通 FeliCa 可尝试读取 IDm、S_PAD0 与 ID 块；旧式 MIFARE Aime 可读取 UID 与 Access Code。
+- 普通 FeliCa 可尝试读取 IDm、S_PAD0 与 ID 块；旧式 MIFARE Aime 的 UID 与 Access Code 读取已实现，但尚待旧式 Aime 实卡验证。
 - 提供正常模式与兼容模式两种 NFCID2 路由方式。
 - 在状态页显示 NFC-F 注册的无 Root 兼容性结果，并区分 NFCID2、`88B4` 和服务启用失败。
 - 提供独立的通用 `4000` 与静态 XML `88B4` 探针，用于定位 ROM 的 HCE-F 校验阶段。
@@ -121,7 +133,7 @@ LSPosed 只会在目标进程启动时装载模块。设备开机后才启用 Ai
 
 ### 3C. Android 15 及以上的 PMm 兜底补丁（按需）
 
-1. 在 KernelSU 管理器中安装 `aimesim-pmm-ksu-v3.zip`。
+1. 在 KernelSU 管理器中安装 `aimesim-pmm-ksu-v3.zip`（v3 系列文件名，当前模块元数据版本为 `3.1.0`）。
 2. 安装完成后重启一次设备。模块首次安装时默认保持关闭。
 3. 打开 AimeSimulator，进入“设置”，向应用授予 Root 权限。
 4. 打开“启用 PMm 补丁”，等待状态变为 `active`。
@@ -150,7 +162,7 @@ LSPosed 只会在目标进程启动时装载模块。设备开机后才启用 Ai
 | --- | --- | --- | --- |
 | Amusement IC | NFC-F / FeliCa | IDm、System Code、加密 S_PAD0、ID 块、Access Code | 可直接带入编辑器 |
 | 普通 FeliCa | NFC-F / FeliCa | IDm、System Code，并尝试读取 S_PAD0 与 ID 块 | 可创建配置，缺失块保持可选 |
-| 旧式 Aime | NFC-A / MIFARE Classic | UID、Access Code | 需在保存前填写对应的 FeliCa IDm |
+| 旧式 Aime | NFC-A / MIFARE Classic | UID、Access Code | 已实现并通过单元测试；尚待实卡验证，保存前需填写对应的 FeliCa IDm |
 
 MIFARE Classic 能否读取还取决于手机 NFC 控制器和 Android 驱动。检测到 NFC-A 不代表设备一定提供 `MifareClassic` 接口。
 
@@ -164,7 +176,7 @@ MIFARE Classic 能否读取还取决于手机 NFC 控制器和 Android 驱动。
 
 - Amusement IC：从服务 `000B` 读取 Block `00` 与 `82`，解密 SPAD0 并提取 Access Code。
 - 普通 FeliCa：读取 IDm、System Code、S_PAD0 与 ID 块；组合读取失败时分别重试。
-- 旧式 Aime：使用 Key B 认证 MIFARE 扇区 0，从 Block 2 提取 Access Code；保存前仍需填写对应的 FeliCa IDm。
+- 旧式 Aime：实现使用 Key B 认证 MIFARE 扇区 0，并从 Block 2 提取 Access Code；该路径尚未由旧式 Aime 实卡验证，保存前仍需填写对应的 FeliCa IDm。
 
 只有点击编辑器的“保存”后才会写入本地配置，读取流程不会修改实体卡。
 
@@ -250,7 +262,7 @@ Android 15+ 的模块将状态保存在 `/data/adb/aimesim_pmm/`。设置页可�
 
 实验版状态页会把失败分成动态 IDm、固定兼容 IDm、System Code `88B4` 和前台服务启用几类。请在关闭所有 Hook/Root 兼容组件后点击“检测 88B4”：只有此时 `88B4 注册已通过` 才能作为无 Root 注册通过的证据。
 
-若 `88B4` 被拒绝，可以点击“启用默认 HCE-F 卡片（4000）”。成功后应用会启用固定兼容 IDm `02FE001145141919`、System Code `4000` 和声明的 PMm，供 HINATA 核对或进行机台互操作实验。该模式可以区分本应用与厂商 Beam/共享等其他 NFC-F 端点，但只有会发现 `4000` 的读卡端才能继续读取卡片数据；再次点击“检测 88B4”或离开应用会结束该路径。
+若 `88B4` 被拒绝，可以点击“启用默认 HCE-F 卡片（4000）”。成功后应用会启用固定兼容 IDm `02FE001145141919`、System Code `4000` 和声明的 PMm，供 HINATA 核对或进行机台互操作实验。该模式可以区分本应用与厂商 Beam/共享等其他 NFC-F 端点，但它只是诊断探针，不是已验证可用的无 Root Aime 回退方案；只有会发现 `4000` 的读卡端才能继续读取卡片数据。再次点击“检测 88B4”或离开应用会结束该路径。
 
 `2.2.8` 还提供“测试静态 88B4”：独立 `HostNfcFService` 在 XML 中直接声明固定 IDm `02FE001145141919`、System Code `88B4` 和 PMm，不调用动态 System Code 注册接口。应用会先读取 Android 解析后保留的 IDm 与 System Code；只有两者仍然正确且前台服务启用成功时，才提示使用 HINATA 实测。若解析阶段已经移除或替换 `88B4`，说明该 ROM 的静态与动态路径都受到相同限制。
 
@@ -258,7 +270,7 @@ Android 15+ 的模块将状态保存在 `/data/adb/aimesim_pmm/`。设置页可�
 
 `2.2.10` 曾尝试让兼容模式的 Block `82` 与固定路由 IDm 一致。后续上机对照确认原始 AICEmu 的普通和兼容模式都能识别，因此该假设被实测推翻，`2.2.11` 已恢复原始兼容行为。旧源码备注说明，固定 `02FE...` 是为 Samsung S8 等要求 IDm 以 `02` 开头才能在 Polling 响应中携带 System Code 的设备准备的，并假设 Konami 读卡器读取该路由 IDm、SBGA 读卡器不检查它。
 
-`2.2.11` 针对 `4000` 服务已被 Chunithm 与 maimai 发现、但两者都在后续阶段提示读取失败的结果，将通用服务 Block `85` 的 System Code 从 `88B4` 同步为 RF 层的 `4000`。该探针用于区分失败来自“RF 与卡片镜像 System Code 不一致”，还是世嘉 Aime 链路在发现后仍硬性要求 `88B4`。动态及静态 Aime 服务保持 `88B4`，兼容模式的 Block `82` 保持真实 IDm。
+`2.2.11` 针对 `4000` 服务已被 Chunithm 与 maimai 发现、但两者都在后续阶段提示读取失败的结果，将通用服务 Block `85` 的 System Code 从 `88B4` 同步为 RF 层的 `4000`。HINATA 已确认 RF 层与 Block `85` 均为 `4000`；最终机台复测尚未完成，因此当前不能将该版本标记为机台兼容。该探针用于区分失败来自“RF 与卡片镜像 System Code 不一致”，还是世嘉 Aime 链路在发现后仍硬性要求 `88B4`。动态及静态 Aime 服务保持 `88B4`，兼容模式的 Block `82` 保持真实 IDm。
 
 ### 实体卡靠近后没有反应
 
@@ -273,7 +285,7 @@ Android 15+ 的模块将状态保存在 `/data/adb/aimesim_pmm/`。设置页可�
 
 ### 为什么旧式 Aime 识别后仍需填写 FeliCa IDm
 
-旧式 Aime 是 MIFARE Classic 卡，只能提供其 UID 和 Access Code；AimeSimulator 的模拟端使用 Android HCE-F，需要 8 字节 FeliCa IDm。应用不会把 MIFARE UID 伪装成 IDm，因此保存前必须由用户提供对应的 FeliCa 配置。
+旧式 Aime 是 MIFARE Classic 卡，只能提供其 UID 和 Access Code；AimeSimulator 的模拟端使用 Android HCE-F，需要 8 字节 FeliCa IDm。应用不会把 MIFARE UID 伪装成 IDm，因此保存前必须由用户提供对应的 FeliCa 配置。该读取流程目前只有代码和单元测试验证，尚未完成旧式 Aime 实卡验证。
 
 ### 手机检测到 NFC-A，但无法读取 MIFARE Classic
 
@@ -315,7 +327,7 @@ adb shell getprop tmp.aimesim.pmm.enabled
 adb shell dumpsys nfc
 ```
 
-Android 15+ 中，开启补丁后日志应出现类似 `patched ST HAL CORE_SET_CONFIG PMm`；关闭后应出现 `PMm patch disabled; passing through ST HAL CORE_SET_CONFIG`。日志可能包含设备实现细节，提交问题前请先移除卡号、序列号和其他敏感信息。
+Android 15+ 中，开启补丁后日志应出现类似 `patched ST HAL CORE_SET_CONFIG PMm`；关闭后应出现 `PMm patch disabled; passing through ST HAL CORE_SET_CONFIG`。日志以及 HINATA FeliCa 诊断 JSON 可能包含 IDm、卡片块数据、原始帧和设备实现细节，提交问题或分享文件前请先检查并移除卡号、序列号和其他敏感信息。
 
 ## 从源码构建
 
@@ -357,6 +369,39 @@ python tools\check_artifacts.py
 
 `tools/check_artifacts.py` 会检查 APK 中的 libxposed API 101 元数据、静态作用域和 arm64 原生库，同时检查 KernelSU ZIP 的必要文件是否完整。版本化 APK 是发布交付副本；Gradle 默认仍输出 `app-debug.apk`。
 
+### GitHub 托管构建与发布
+
+仓库包含两套 GitHub Actions 工作流：
+
+- `Android CI`：在 `main`、`codex/**`、Pull Request 或手动触发时运行单元测试、lint、HINATA 协议测试、debug APK 构建、KernelSU 模块打包与产物检查，并保留 30 天的测试 APK Artifact。
+- `Android Release`：在推送 `v版本号` 标签时构建固定签名的 release APK，验证签名与 SHA-256，并创建或更新对应的 GitHub Release。
+
+Actions 中的 debug Artifact 只用于测试。GitHub 托管运行器生成的 debug 签名不保证跨构建保持一致，安装另一轮 Artifact 时可能需要先卸载旧包；正式分发必须使用 `Android Release` 的固定签名。
+
+发布前，在仓库 `Settings > Secrets and variables > Actions` 配置以下 Repository secrets：
+
+| Secret | 内容 |
+| --- | --- |
+| `ANDROID_SIGNING_KEY` | JKS/PKCS12 签名库文件的 Base64 内容 |
+| `ANDROID_KEY_STORE_PASSWORD` | 签名库密码 |
+| `ANDROID_KEY_ALIAS` | 签名密钥别名 |
+| `ANDROID_KEY_PASSWORD` | 签名密钥密码 |
+
+签名库必须在 GitHub 之外另行安全备份；丢失后将无法为已安装版本提供可直接升级的 APK。PowerShell 可使用以下命令把已有签名库编码后复制到剪贴板：
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("aimesimulator-release.jks")) | Set-Clipboard
+```
+
+四个 Secrets 配置完成后，先让 `versionName` 与标签保持一致，再触发发布：
+
+```bash
+git tag v2.2.11
+git push origin v2.2.11
+```
+
+工作流会拒绝标签与 `versionName` 不一致、签名 Secrets 缺失或 APK 签名校验失败的发布。
+
 ## 项目结构
 
 ```text
@@ -368,7 +413,8 @@ app/
 ├─ src/main/java/.../ui/     原生 Android 界面
 └─ src/main/cpp/             PMm Hook 与 Android 15+ HAL 注入器
 ksu-module/                  KernelSU 模块脚本和元数据
-tools/                       模块打包与产物校验工具
+.github/workflows/           GitHub 托管 CI 与签名发布工作流
+tools/                       HINATA 诊断、模块打包与产物校验工具
 docs/FUNCTIONAL_SPEC.md      可观察行为与协议约定
 THIRD_PARTY_NOTICES.md       第三方依赖及其许可证
 ```
@@ -393,4 +439,4 @@ Aime 及相关名称和标识属于其各自权利人。本项目是非官方兼
 
 ## English summary
 
-AimeSimulator is an Android HCE-F / FeliCa Lite profile manager and simulator. The 2.2.11 experiment keeps the original compatibility-IDm behavior and aligns the generic service's RF System Code 4000 with block 85, while retaining the static and dynamic 88B4 paths. Version 2.2.5 remains the stable physical-card reader delivery. See the Chinese sections above for requirements, limitations, implementation references, and safety notes.
+AimeSimulator is an Android HCE-F / FeliCa Lite profile manager and simulator. Version 2.2.5 remains the stable delivery. The 2.2.11 experiment aligns the generic service's RF System Code 4000 with block 85 and has been verified with HINATA, but its final cabinet retest is still pending. GitHub Actions builds test artifacts on branches and publishes fixed-signature APKs from matching version tags. See the Chinese sections above for requirements, limitations, implementation references, and safety notes.
