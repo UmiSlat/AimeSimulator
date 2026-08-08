@@ -39,7 +39,12 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Install Android build packages
-        run: sdkmanager "platforms;android-34" "build-tools;34.0.0" "ndk;25.1.8937393" "cmake;3.22.1"
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-34" \
+            "build-tools;34.0.0" \
+            "ndk;25.1.8937393" \
+            "cmake;3.22.1"
 
       - name: Test and build debug APK
         run: ./gradlew testDebugUnitTest lintDebug assembleDebug --stacktrace
