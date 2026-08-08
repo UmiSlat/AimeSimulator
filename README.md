@@ -7,9 +7,20 @@ AimeSimulator 是一个面向 Android 的 NFC-F / FeliCa Lite 卡片配置管理
 > [!WARNING]
 > 本项目会使用 HCE-F、LSPosed Hook、Root 命令和厂商 NFC HAL 注入。请仅在自己拥有或获准测试的设备与卡片上使用，并提前准备可恢复系统的手段。项目不保证兼容任何具体商业设备或服务。
 
+## 发布与验证状态
+
+| 项目 | 当前状态 |
+| --- | --- |
+| 正式主线 | `main` / `2.2.5`，GitHub 托管构建与 Release 只服务该稳定线 |
+| 实验版本 | 仅在本地构建和保存，不上传 GitHub Actions APK Artifact，也不作为 GitHub Release 发布 |
+| 无 Root HCE-F | 取决于设备和 ROM；已测试的 Xiaomi 15 Pro / Android 16 会拒绝动态 NFCID2，不能视为普遍支持 |
+| 旧式 MIFARE Aime 读取 | 代码与单元测试已完成，尚无旧式 Aime 实卡完成物理验证 |
+
+`main` 的 push 会由 GitHub Actions 构建测试 APK Artifact。只有带固定签名并由匹配版本标签触发的 APK 才会进入 [GitHub Releases](https://github.com/UmiSlat/AimeSimulator/releases)。
+
 ## 快速开始（无 Root）
 
-1. 从 [GitHub Releases](https://github.com/UmiSlat/AimeSimulator/releases) 安装最新 APK。
+1. 从 [GitHub Releases](https://github.com/UmiSlat/AimeSimulator/releases) 安装正式主线 APK。
 2. 打开应用，在 Android 系统界面中确认是否将 AimeSimulator 设为默认 NFC 应用。
 3. 在“卡片”页选择“手动添加”或“读取卡片”，检查字段后保存配置。
 4. 选中要使用的配置；首次尝试建议保持 PMm 补丁关闭。
@@ -26,7 +37,7 @@ AimeSimulator 是一个面向 Android 的 NFC-F / FeliCa Lite 卡片配置管理
 - 支持手动填写或从支持的实体卡读取 Access Code、IDm、S_PAD0 和 ID 块。
 - 使用单一“读取卡片”入口自动识别 Amusement IC、普通 FeliCa 和旧式 MIFARE Aime。
 - Amusement IC 可读取 IDm、加密 S_PAD0、ID 块并解密得到 Access Code。
-- 普通 FeliCa 可尝试读取 IDm、S_PAD0 与 ID 块；旧式 MIFARE Aime 可读取 UID 与 Access Code。
+- 普通 FeliCa 可尝试读取 IDm、S_PAD0 与 ID 块；旧式 MIFARE Aime 的 UID 与 Access Code 读取已实现，但尚待旧式 Aime 实卡验证。
 - 提供正常模式与兼容模式两种 NFCID2 路由方式。
 - 进入应用时检查系统默认 NFC 支付应用；如果尚未选择本应用，则打开 Android 的系统确认界面。
 - 响应 FeliCa Lite 的 Read Without Encryption 请求。
@@ -115,7 +126,7 @@ io.github.umislat.aimesimulator
 
 ### 3C. Android 15 及以上的 PMm 兜底补丁（按需）
 
-1. 在 KernelSU 管理器中安装 `aimesim-pmm-ksu-v3.zip`。
+1. 在 KernelSU 管理器中安装 `aimesim-pmm-ksu-v3.zip`（v3 系列文件名，当前模块元数据版本为 `3.1.0`）。
 2. 安装完成后重启一次设备。模块首次安装时默认保持关闭。
 3. 打开 AimeSimulator，进入“设置”，向应用授予 Root 权限。
 4. 打开“启用 PMm 补丁”，等待状态变为 `active`。
@@ -144,7 +155,7 @@ io.github.umislat.aimesimulator
 | --- | --- | --- | --- |
 | Amusement IC | NFC-F / FeliCa | IDm、System Code、加密 S_PAD0、ID 块、Access Code | 可直接带入编辑器 |
 | 普通 FeliCa | NFC-F / FeliCa | IDm、System Code，并尝试读取 S_PAD0 与 ID 块 | 可创建配置，缺失块保持可选 |
-| 旧式 Aime | NFC-A / MIFARE Classic | UID、Access Code | 需在保存前填写对应的 FeliCa IDm |
+| 旧式 Aime | NFC-A / MIFARE Classic | UID、Access Code | 已实现并通过单元测试；尚待实卡验证，保存前需填写对应的 FeliCa IDm |
 
 MIFARE Classic 能否读取还取决于手机 NFC 控制器和 Android 驱动。检测到 NFC-A 不代表设备一定提供 `MifareClassic` 接口。
 
@@ -158,7 +169,7 @@ MIFARE Classic 能否读取还取决于手机 NFC 控制器和 Android 驱动。
 
 - Amusement IC：从服务 `000B` 读取 Block `00` 与 `82`，解密 SPAD0 并提取 Access Code。
 - 普通 FeliCa：读取 IDm、System Code、S_PAD0 与 ID 块；组合读取失败时分别重试。
-- 旧式 Aime：使用 Key B 认证 MIFARE 扇区 0，从 Block 2 提取 Access Code；保存前仍需填写对应的 FeliCa IDm。
+- 旧式 Aime：实现使用 Key B 认证 MIFARE 扇区 0，并从 Block 2 提取 Access Code；该路径尚未由旧式 Aime 实卡验证，保存前仍需填写对应的 FeliCa IDm。
 
 只有点击编辑器的“保存”后才会写入本地配置，读取流程不会修改实体卡。
 
@@ -255,7 +266,7 @@ Android 15+ 的模块将状态保存在 `/data/adb/aimesim_pmm/`。设置页可�
 
 ### 为什么旧式 Aime 识别后仍需填写 FeliCa IDm
 
-旧式 Aime 是 MIFARE Classic 卡，只能提供其 UID 和 Access Code；AimeSimulator 的模拟端使用 Android HCE-F，需要 8 字节 FeliCa IDm。应用不会把 MIFARE UID 伪装成 IDm，因此保存前必须由用户提供对应的 FeliCa 配置。
+旧式 Aime 是 MIFARE Classic 卡，只能提供其 UID 和 Access Code；AimeSimulator 的模拟端使用 Android HCE-F，需要 8 字节 FeliCa IDm。应用不会把 MIFARE UID 伪装成 IDm，因此保存前必须由用户提供对应的 FeliCa 配置。该读取流程目前只有代码和单元测试验证，尚未完成旧式 Aime 实卡验证。
 
 ### 手机检测到 NFC-A，但无法读取 MIFARE Classic
 
@@ -337,6 +348,39 @@ python tools\check_artifacts.py
 
 `tools/check_artifacts.py` 会检查 APK 中的 libxposed API 101 元数据、静态作用域和 arm64 原生库，同时检查 KernelSU ZIP 的必要文件是否完整。版本化 APK 是发布交付副本；Gradle 默认仍输出 `app-debug.apk`。
 
+### GitHub 托管构建与发布
+
+仓库主线包含两套 GitHub Actions 工作流：
+
+- `Android CI`：仅在 `main` push 或手动触发时运行单元测试、lint、debug APK 构建、KernelSU 模块打包与产物检查，并保留 30 天的测试 APK Artifact。
+- `Android Release`：在推送与 `versionName` 一致的 `v版本号` 标签时构建固定签名的 release APK，验证签名与 SHA-256，并创建或更新对应的 GitHub Release。
+
+实验分支和实验 APK 不触发托管构建，继续使用上方本地命令生成。Actions 中的 debug Artifact 只用于主线安装测试；正式分发必须使用 `Android Release` 的固定签名。
+
+发布前，在仓库 `Settings > Secrets and variables > Actions` 配置以下 Repository secrets：
+
+| Secret | 内容 |
+| --- | --- |
+| `ANDROID_SIGNING_KEY` | JKS/PKCS12 签名库文件的 Base64 内容 |
+| `ANDROID_KEY_STORE_PASSWORD` | 签名库密码 |
+| `ANDROID_KEY_ALIAS` | 签名密钥别名 |
+| `ANDROID_KEY_PASSWORD` | 签名密钥密码 |
+
+签名库必须在 GitHub 之外另行安全备份；丢失后将无法为已安装版本提供可直接升级的 APK。PowerShell 可使用以下命令把已有签名库编码后复制到剪贴板：
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("aimesimulator-release.jks")) | Set-Clipboard
+```
+
+四个 Secrets 配置完成后，先让 `versionName` 与标签保持一致，再触发发布：
+
+```bash
+git tag v2.2.5
+git push origin v2.2.5
+```
+
+工作流会拒绝标签与 `versionName` 不一致、签名 Secrets 缺失或 APK 签名校验失败的发布。
+
 ## 项目结构
 
 ```text
@@ -348,6 +392,7 @@ app/
 ├─ src/main/java/.../ui/     原生 Android 界面
 └─ src/main/cpp/             PMm Hook 与 Android 15+ HAL 注入器
 ksu-module/                  KernelSU 模块脚本和元数据
+.github/workflows/           主线 GitHub 托管 CI 与签名发布工作流
 tools/                       模块打包与产物校验工具
 docs/FUNCTIONAL_SPEC.md      可观察行为与协议约定
 THIRD_PARTY_NOTICES.md       第三方依赖及其许可证
@@ -373,4 +418,4 @@ Aime 及相关名称和标识属于其各自权利人。本项目是非官方兼
 
 ## English summary
 
-AimeSimulator is an Android HCE-F / FeliCa Lite profile manager and simulator. Version 2.2.5 provides one physical-card reader flow for Amusement IC, generic FeliCa, and legacy MIFARE Aime cards, including supported Access Code extraction. Standard profile management, card reading, compatibility-mode routing, and HCE-F operation can be tried without root; LSPosed and the experimental arm64 KernelSU PMm patch are optional compatibility paths for affected devices. See the Chinese sections above for requirements, limitations, implementation references, and safety notes.
+AimeSimulator is an Android HCE-F / FeliCa Lite profile manager and simulator. Version 2.2.5 remains the stable mainline delivery. GitHub Actions builds mainline test artifacts and publishes fixed-signature APKs from matching version tags; experimental APKs remain local builds. The legacy MIFARE reader path is implemented and unit-tested but still awaits verification with a physical legacy Aime card. See the Chinese sections above for requirements, limitations, implementation references, and safety notes.
