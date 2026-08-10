@@ -1,5 +1,6 @@
 package io.github.umislat.aimesimulator.nfc
 
+import io.github.umislat.aimesimulator.data.IdmRouteMode
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -7,7 +8,7 @@ class RootlessAssessmentTest {
     @Test fun acceptsCompletedAimeRegistration() {
         val assessment = RootlessAssessment.from(
             HceSession.Report(HceSession.Stage.READY),
-            compatibilityMode = false,
+            routeMode = IdmRouteMode.ORIGINAL,
             hasProfile = true
         )
 
@@ -19,18 +20,34 @@ class RootlessAssessmentTest {
 
         assertEquals(
             RootlessAssessment.Outcome.DYNAMIC_ID_REJECTED,
-            RootlessAssessment.from(report, compatibilityMode = false, hasProfile = true).outcome
+            RootlessAssessment.from(
+                report,
+                routeMode = IdmRouteMode.ORIGINAL,
+                hasProfile = true
+            ).outcome
         )
         assertEquals(
             RootlessAssessment.Outcome.COMPATIBILITY_ID_REJECTED,
-            RootlessAssessment.from(report, compatibilityMode = true, hasProfile = true).outcome
+            RootlessAssessment.from(
+                report,
+                routeMode = IdmRouteMode.FIXED_COMPATIBILITY,
+                hasProfile = true
+            ).outcome
+        )
+        assertEquals(
+            RootlessAssessment.Outcome.COMPATIBILITY_ID_REJECTED,
+            RootlessAssessment.from(
+                report,
+                routeMode = IdmRouteMode.PREFIX_COMPATIBILITY,
+                hasProfile = true
+            ).outcome
         )
     }
 
     @Test fun reportsSystemCodeAsItsOwnBlocker() {
         val assessment = RootlessAssessment.from(
             HceSession.Report(HceSession.Stage.SYSTEM_CODE),
-            compatibilityMode = true,
+            routeMode = IdmRouteMode.PREFIX_COMPATIBILITY,
             hasProfile = true
         )
 
@@ -40,7 +57,7 @@ class RootlessAssessmentTest {
     @Test fun requiresAProfileBeforeTesting() {
         val assessment = RootlessAssessment.from(
             report = null,
-            compatibilityMode = false,
+            routeMode = IdmRouteMode.ORIGINAL,
             hasProfile = false
         )
 

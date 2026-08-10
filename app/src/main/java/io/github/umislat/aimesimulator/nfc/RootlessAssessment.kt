@@ -1,8 +1,10 @@
 package io.github.umislat.aimesimulator.nfc
 
+import io.github.umislat.aimesimulator.data.IdmRouteMode
+
 internal data class RootlessAssessment(
     val outcome: Outcome,
-    val compatibilityMode: Boolean,
+    val routeMode: IdmRouteMode,
     val detail: String = ""
 ) {
     enum class Outcome {
@@ -21,21 +23,21 @@ internal data class RootlessAssessment(
     companion object {
         fun from(
             report: HceSession.Report?,
-            compatibilityMode: Boolean,
+            routeMode: IdmRouteMode,
             hasProfile: Boolean
         ): RootlessAssessment {
             if (!hasProfile) {
-                return RootlessAssessment(Outcome.PROFILE_REQUIRED, compatibilityMode)
+                return RootlessAssessment(Outcome.PROFILE_REQUIRED, routeMode)
             }
             if (report == null) {
-                return RootlessAssessment(Outcome.SERVICE_RESTARTING, compatibilityMode)
+                return RootlessAssessment(Outcome.SERVICE_RESTARTING, routeMode)
             }
             val outcome = when (report.stage) {
                 HceSession.Stage.READY -> Outcome.REGISTRATION_ACCEPTED
                 HceSession.Stage.UNSUPPORTED -> Outcome.UNSUPPORTED
                 HceSession.Stage.NFC_DISABLED -> Outcome.NFC_DISABLED
                 HceSession.Stage.SERVICE_RESTARTING -> Outcome.SERVICE_RESTARTING
-                HceSession.Stage.ID -> if (compatibilityMode) {
+                HceSession.Stage.ID -> if (routeMode != IdmRouteMode.ORIGINAL) {
                     Outcome.COMPATIBILITY_ID_REJECTED
                 } else {
                     Outcome.DYNAMIC_ID_REJECTED
@@ -44,7 +46,7 @@ internal data class RootlessAssessment(
                 HceSession.Stage.ENABLE -> Outcome.ENABLE_FAILED
                 HceSession.Stage.EXCEPTION -> Outcome.ERROR
             }
-            return RootlessAssessment(outcome, compatibilityMode, report.detail)
+            return RootlessAssessment(outcome, routeMode, report.detail)
         }
     }
 }

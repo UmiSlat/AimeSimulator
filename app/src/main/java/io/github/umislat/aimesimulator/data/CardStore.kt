@@ -12,6 +12,7 @@ internal class CardStore(context: Context) {
 
     init {
         migrateExistingInstallation()
+        migrateRouteMode()
     }
 
     @Synchronized
@@ -46,10 +47,12 @@ internal class CardStore(context: Context) {
         return editor.commit()
     }
 
-    fun compatibilityMode(): Boolean = preferences.getBoolean(KEY_COMPATIBILITY, false)
+    fun idmRouteMode(): IdmRouteMode = IdmRouteMode.fromStoredValue(
+        preferences.getString(KEY_IDM_ROUTE_MODE, null)
+    ) ?: IdmRouteMode.ORIGINAL
 
-    fun setCompatibilityMode(enabled: Boolean) {
-        preferences.edit().putBoolean(KEY_COMPATIBILITY, enabled).apply()
+    fun setIdmRouteMode(mode: IdmRouteMode) {
+        preferences.edit().putString(KEY_IDM_ROUTE_MODE, mode.name).apply()
     }
 
     fun showIdm(): Boolean = preferences.getBoolean(KEY_SHOW_IDM, true)
@@ -139,6 +142,19 @@ internal class CardStore(context: Context) {
         editor.apply()
     }
 
+    private fun migrateRouteMode() {
+        if (preferences.contains(KEY_IDM_ROUTE_MODE)) return
+        val mode = if (preferences.getBoolean(KEY_COMPATIBILITY, false)) {
+            IdmRouteMode.FIXED_COMPATIBILITY
+        } else {
+            IdmRouteMode.ORIGINAL
+        }
+        preferences.edit()
+            .putString(KEY_IDM_ROUTE_MODE, mode.name)
+            .remove(KEY_COMPATIBILITY)
+            .apply()
+    }
+
     private fun JSONObject.optNullableString(key: String): String? =
         if (has(key) && !isNull(key)) optString(key).takeIf(String::isNotBlank) else null
 
@@ -148,6 +164,7 @@ internal class CardStore(context: Context) {
         private const val KEY_PROFILES = "profiles_v2"
         private const val KEY_SELECTED = "selected_profile"
         private const val KEY_COMPATIBILITY = "compatibility_mode"
+        private const val KEY_IDM_ROUTE_MODE = "idm_route_mode"
         private const val KEY_SHOW_IDM = "show_idm"
         private const val KEY_SHOW_ACCESS_CODE = "show_access_code"
         private const val KEY_HCE_STATUS = "last_hce_status"

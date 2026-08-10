@@ -5,10 +5,26 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class CardProfileTest {
-    @Test fun routesOnlyCompatibilityIdentifier() {
+    @Test fun routesOriginalFixedAndPrefixCompatibilityIdentifiers() {
         val profile = requireNotNull(CardProfile.create("Test", "4D494D494245414D"))
-        assertEquals("4D494D494245414D", profile.routedIdm(false))
-        assertEquals(CardProfile.COMPATIBILITY_IDM, profile.routedIdm(true))
+        assertEquals("4D494D494245414D", profile.routedIdm(IdmRouteMode.ORIGINAL))
+        assertEquals(
+            CardProfile.COMPATIBILITY_IDM,
+            profile.routedIdm(IdmRouteMode.FIXED_COMPATIBILITY)
+        )
+        assertEquals(
+            "02FE4D494245414D",
+            profile.routedIdm(IdmRouteMode.PREFIX_COMPATIBILITY)
+        )
+    }
+
+    @Test fun prefixCompatibilityKeepsAnExisting02feIdentifier() {
+        val profile = requireNotNull(CardProfile.create("Test", "02FE123456789ABC"))
+
+        assertEquals(
+            "02FE123456789ABC",
+            profile.routedIdm(IdmRouteMode.PREFIX_COMPATIBILITY)
+        )
     }
 
     @Test fun validatesCapturedBlocks() {

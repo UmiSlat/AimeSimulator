@@ -10,6 +10,7 @@ import android.os.DeadObjectException
 import android.util.Log
 import io.github.umislat.aimesimulator.data.CardProfile
 import io.github.umislat.aimesimulator.data.CardStore
+import io.github.umislat.aimesimulator.data.IdmRouteMode
 
 internal class HceSession(private val context: Context) {
     enum class Stage {
@@ -34,7 +35,7 @@ internal class HceSession(private val context: Context) {
     fun activate(
         activity: Activity,
         profile: CardProfile,
-        compatibilityMode: Boolean,
+        routeMode: IdmRouteMode,
         systemCode: String = SYSTEM_CODE
     ): Report {
         if (!context.packageManager.hasSystemFeature(PackageManager.FEATURE_NFC_HOST_CARD_EMULATION_NFCF)) {
@@ -55,7 +56,7 @@ internal class HceSession(private val context: Context) {
         return try {
             val manager = NfcFCardEmulation.getInstance(nfcAdapter)
             manager.disableService(activity)
-            if (!manager.setNfcid2ForService(component, profile.routedIdm(compatibilityMode))) {
+            if (!manager.setNfcid2ForService(component, profile.routedIdm(routeMode))) {
                 restore(store, previousId)
                 return report(Stage.ID, "NFCID2 registration failed")
             }

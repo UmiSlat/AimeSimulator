@@ -39,6 +39,7 @@ import io.github.umislat.aimesimulator.R
 import io.github.umislat.aimesimulator.ThemeSettings
 import io.github.umislat.aimesimulator.data.CardProfile
 import io.github.umislat.aimesimulator.data.CardStore
+import io.github.umislat.aimesimulator.data.IdmRouteMode
 import io.github.umislat.aimesimulator.nfc.DefaultNfcAppChecker
 import io.github.umislat.aimesimulator.nfc.HceSession
 import io.github.umislat.aimesimulator.nfc.RootlessAssessment
@@ -259,10 +260,10 @@ class MainActivity : AppCompatActivity() {
             }
             addView(cardPageStatusView)
             store.selectedProfile()?.let { profile ->
+                val routeMode = store.idmRouteMode()
                 addView(TextView(this@MainActivity).apply {
                     text = getString(
-                        if (store.compatibilityMode()) R.string.status_profile_compatibility
-                        else R.string.status_profile_normal,
+                        routeModeStatusRes(routeMode),
                         profile.label
                     )
                     textSize = 13f
@@ -364,18 +365,10 @@ class MainActivity : AppCompatActivity() {
                 })
             })
         })
-        content.addView(MaterialSwitch(this).apply {
-            setText(R.string.compatibility_mode)
-            isChecked = store.compatibilityMode()
-            setOnCheckedChangeListener { button, enabled ->
-                if (!button.isPressed) return@setOnCheckedChangeListener
-                store.setCompatibilityMode(enabled)
-                activateSelected()
-                showPage(TAB_STATUS, refreshPmm = false)
-            }
-        })
+        content.addView(sectionTitle(R.string.route_mode))
+        content.addView(routeModeSelector())
         content.addView(TextView(this).apply {
-            setText(R.string.compatibility_mode_summary)
+            setText(R.string.route_mode_summary)
             textSize = 13f
             alpha = 0.72f
             setPadding(0, 0, 0, dp(8))
@@ -389,6 +382,54 @@ class MainActivity : AppCompatActivity() {
         content.addView(pmmCard())
         scroll.addView(content)
         return scroll
+    }
+
+    private fun routeModeSelector(): MaterialButtonToggleGroup =
+        MaterialButtonToggleGroup(this).apply {
+            isSingleSelection = true
+            isSelectionRequired = true
+            val buttons = linkedMapOf<Int, IdmRouteMode>()
+            listOf(
+                IdmRouteMode.ORIGINAL to R.string.route_mode_original,
+                IdmRouteMode.FIXED_COMPATIBILITY to R.string.route_mode_fixed,
+                IdmRouteMode.PREFIX_COMPATIBILITY to R.string.route_mode_prefix
+            ).forEach { (mode, label) ->
+                val button = MaterialButton(
+                    this@MainActivity,
+                    null,
+                    com.google.android.material.R.attr.materialButtonOutlinedStyle
+                ).apply {
+                    id = View.generateViewId()
+                    setText(label)
+                    textSize = 12f
+                    maxLines = 2
+                    minWidth = 0
+                    minimumWidth = 0
+                    minHeight = dp(48)
+                }
+                buttons[button.id] = mode
+                addView(button, LinearLayout.LayoutParams(0, -2, 1f))
+                if (mode == store.idmRouteMode()) check(button.id)
+            }
+            addOnButtonCheckedListener { _, checkedId, isChecked ->
+                val mode = buttons[checkedId] ?: return@addOnButtonCheckedListener
+                if (!isChecked || mode == store.idmRouteMode()) return@addOnButtonCheckedListener
+                store.setIdmRouteMode(mode)
+                activateSelected()
+                showPage(TAB_STATUS, refreshPmm = false)
+            }
+        }
+
+    private fun routeModeLabelRes(mode: IdmRouteMode): Int = when (mode) {
+        IdmRouteMode.ORIGINAL -> R.string.normal_mode
+        IdmRouteMode.FIXED_COMPATIBILITY -> R.string.fixed_compatibility_mode
+        IdmRouteMode.PREFIX_COMPATIBILITY -> R.string.prefix_compatibility_mode
+    }
+
+    private fun routeModeStatusRes(mode: IdmRouteMode): Int = when (mode) {
+        IdmRouteMode.ORIGINAL -> R.string.status_profile_normal
+        IdmRouteMode.FIXED_COMPATIBILITY -> R.string.status_profile_compatibility
+        IdmRouteMode.PREFIX_COMPATIBILITY -> R.string.status_profile_prefix_compatibility
     }
 
     private fun rootlessCard(): MaterialCardView = MaterialCardView(this).apply {
@@ -457,6 +498,7 @@ class MainActivity : AppCompatActivity() {
             if (profile == null) {
                 addView(bodyText(R.string.select_or_add_card))
             } else {
+                val routeMode = store.idmRouteMode()
                 addView(detailLine(R.string.card_name, profile.label))
                 addView(detailLine(
                     R.string.idm_label,
@@ -472,8 +514,12 @@ class MainActivity : AppCompatActivity() {
                 ))
                 addView(detailLine(
                     R.string.route_mode,
-                    getString(if (store.compatibilityMode()) R.string.compatibility_mode
-                        else R.string.normal_mode)
+                    getString(routeModeLabelRes(routeMode))
+                ))
+                addView(detailLine(
+                    R.string.routed_nfcid2_label,
+                    if (store.showIdm()) profile.routedIdm(routeMode)
+                    else getString(R.string.hidden_value)
                 ))
                 addView(detailLine(R.string.system_code_label, HceSession.SYSTEM_CODE))
                 addView(detailLine(R.string.pmm_value_label, STANDARD_PMM_DISPLAY))
@@ -729,7 +775,7 @@ class MainActivity : AppCompatActivity() {
             renderRootlessAssessment()
             return
         }
-        val report = session.activate(this, selected, store.compatibilityMode())
+        val report = session.activate(this, selected, store.idmRouteMode())
         lastHceReport = report
         val message = when (report.stage) {
             HceSession.Stage.READY -> getString(R.string.hce_ready, selected.label)
@@ -793,16 +839,19 @@ class MainActivity : AppCompatActivity() {
     private fun renderRootlessAssessment() {
         val assessment = RootlessAssessment.from(
             lastHceReport,
-            store.compatibilityMode(),
+            store.idmRouteMode(),
             store.selectedProfile() != null
         )
         val (title, detail) = when (assessment.outcome) {
             RootlessAssessment.Outcome.PROFILE_REQUIRED ->
                 R.string.rootless_profile_required_title to R.string.rootless_profile_required_detail
-            RootlessAssessment.Outcome.REGISTRATION_ACCEPTED -> if (assessment.compatibilityMode) {
-                R.string.rootless_accepted_title to R.string.rootless_accepted_compatibility_detail
-            } else {
-                R.string.rootless_accepted_title to R.string.rootless_accepted_normal_detail
+            RootlessAssessment.Outcome.REGISTRATION_ACCEPTED -> when (assessment.routeMode) {
+                IdmRouteMode.ORIGINAL ->
+                    R.string.rootless_accepted_title to R.string.rootless_accepted_normal_detail
+                IdmRouteMode.FIXED_COMPATIBILITY ->
+                    R.string.rootless_accepted_title to R.string.rootless_accepted_compatibility_detail
+                IdmRouteMode.PREFIX_COMPATIBILITY ->
+                    R.string.rootless_accepted_title to R.string.rootless_accepted_prefix_detail
             }
             RootlessAssessment.Outcome.UNSUPPORTED ->
                 R.string.rootless_unsupported_title to R.string.rootless_unsupported_detail
@@ -812,8 +861,13 @@ class MainActivity : AppCompatActivity() {
                 R.string.rootless_checking_title to R.string.rootless_checking_detail
             RootlessAssessment.Outcome.DYNAMIC_ID_REJECTED ->
                 R.string.rootless_dynamic_id_title to R.string.rootless_dynamic_id_detail
-            RootlessAssessment.Outcome.COMPATIBILITY_ID_REJECTED ->
+            RootlessAssessment.Outcome.COMPATIBILITY_ID_REJECTED -> if (
+                assessment.routeMode == IdmRouteMode.PREFIX_COMPATIBILITY
+            ) {
+                R.string.rootless_prefix_id_title to R.string.rootless_prefix_id_detail
+            } else {
                 R.string.rootless_compatibility_id_title to R.string.rootless_compatibility_id_detail
+            }
             RootlessAssessment.Outcome.SYSTEM_CODE_REJECTED ->
                 R.string.rootless_system_code_title to R.string.rootless_system_code_detail
             RootlessAssessment.Outcome.ENABLE_FAILED ->
