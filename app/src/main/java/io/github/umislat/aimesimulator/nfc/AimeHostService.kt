@@ -9,11 +9,13 @@ import io.github.umislat.aimesimulator.data.CardStore
 
 open class AimeHostService : HostNfcFService() {
     protected open val imageSystemCode: String = HceSession.SYSTEM_CODE
+    private val store by lazy { CardStore(this) }
+    private var imageCache: CachedImage? = null
 
     override fun processNfcFPacket(commandPacket: ByteArray, extras: Bundle?): ByteArray? {
         val request = FelicaCodec.decodeRequest(commandPacket) ?: return null
-        val profile = CardStore(this).selectedProfile() ?: CardProfile.fallback()
-        val image = CardImage(profile, imageSystemCode)
+        val profile = store.selectedProfile() ?: CardProfile.fallback()
+        val image = imageFor(profile)
 
         val response = when (request.command) {
             FelicaCodec.READ_COMMAND -> {
@@ -41,6 +43,14 @@ open class AimeHostService : HostNfcFService() {
         return response
     }
 
+    @Synchronized
+    private fun imageFor(profile: CardProfile): CardImage {
+        imageCache?.takeIf { it.profile == profile }?.let { return it.image }
+        return CardImage(profile, imageSystemCode).also { image ->
+            imageCache = CachedImage(profile, image)
+        }
+    }
+
     override fun onDeactivated(reason: Int) {
         if (BuildConfig.DEBUG) Log.d(TAG, "deactivated reason=$reason")
     }
@@ -48,6 +58,8 @@ open class AimeHostService : HostNfcFService() {
     companion object {
         private const val TAG = "AimeHostService"
     }
+
+    private data class CachedImage(val profile: CardProfile, val image: CardImage)
 }
 
 class StaticAimeHostService : AimeHostService()
