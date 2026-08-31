@@ -53,11 +53,13 @@ class MainActivity : AppCompatActivity() {
     private var selectedTab = TAB_CARDS
     private var foreground = false
     private var hasResumed = false
-    private var defaultNfcAppChecked = false
     private var activationRetry: Runnable? = null
     private var hceStatusText: CharSequence = ""
     private var cardPageStatusView: TextView? = null
     private var statusPageStatusView: TextView? = null
+    private var defaultNfcStatus = DefaultNfcAppChecker.Result.NFC_NOT_READY
+    private var defaultNfcStatusView: TextView? = null
+    private var defaultNfcAction: MaterialButton? = null
 
     private var pmmSnapshot: PmmManager.Snapshot? = null
     private var pmmSwitch: MaterialSwitch? = null
@@ -100,7 +102,7 @@ class MainActivity : AppCompatActivity() {
         activateSelected()
         if (hasResumed && selectedTab == TAB_STATUS) refreshPmm()
         hasResumed = true
-        checkDefaultNfcApp()
+        refreshDefaultNfcAppStatus()
     }
 
     override fun onPause() {
@@ -151,6 +153,8 @@ class MainActivity : AppCompatActivity() {
         selectedTab = tab
         cardPageStatusView = null
         statusPageStatusView = null
+        defaultNfcStatusView = null
+        defaultNfcAction = null
         pmmSwitch = null
         pmmStatus = null
         pmmProgress = null
@@ -172,6 +176,7 @@ class MainActivity : AppCompatActivity() {
         )
         updateHceStatusViews()
         if (tab == TAB_STATUS) {
+            renderDefaultNfcAppStatus()
             pmmSnapshot?.let(::renderPmm)
             if (refreshPmm) refreshPmm()
         }
@@ -351,6 +356,8 @@ class MainActivity : AppCompatActivity() {
                 })
             })
         })
+        content.addView(sectionTitle(R.string.default_nfc_app))
+        content.addView(defaultNfcAppCard())
         content.addView(MaterialSwitch(this).apply {
             setText(R.string.compatibility_mode)
             isChecked = store.compatibilityMode()
@@ -376,6 +383,32 @@ class MainActivity : AppCompatActivity() {
         return scroll
     }
 
+    private fun defaultNfcAppCard(): MaterialCardView = MaterialCardView(this).apply {
+        radius = dp(20).toFloat()
+        strokeWidth = dp(1)
+        addView(LinearLayout(this@MainActivity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(14), dp(18), dp(14))
+            defaultNfcStatusView = TextView(this@MainActivity).apply {
+                textSize = 14f
+            }
+            addView(defaultNfcStatusView)
+            defaultNfcAction = MaterialButton(
+                this@MainActivity,
+                null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle
+            ).apply {
+                setText(R.string.set_default_nfc_app)
+                setOnClickListener {
+                    defaultNfcStatus = DefaultNfcAppChecker.request(this@MainActivity)
+                    renderDefaultNfcAppStatus()
+                }
+            }
+            addView(defaultNfcAction, LinearLayout.LayoutParams(-1, -2).apply {
+                topMargin = dp(8)
+            })
+        })
+    }
     private fun currentProfileCard(): MaterialCardView = MaterialCardView(this).apply {
         radius = dp(20).toFloat()
         strokeWidth = dp(1)
@@ -692,11 +725,26 @@ class MainActivity : AppCompatActivity() {
         activationRetry = null
     }
 
-    private fun checkDefaultNfcApp() {
-        if (defaultNfcAppChecked) return
-        when (DefaultNfcAppChecker.checkAndRequest(this)) {
-            DefaultNfcAppChecker.Result.NFC_NOT_READY -> Unit
-            else -> defaultNfcAppChecked = true
+    private fun refreshDefaultNfcAppStatus() {
+        defaultNfcStatus = DefaultNfcAppChecker.check(this)
+        renderDefaultNfcAppStatus()
+    }
+
+    private fun renderDefaultNfcAppStatus() {
+        defaultNfcStatusView?.setText(when (defaultNfcStatus) {
+            DefaultNfcAppChecker.Result.ALREADY_DEFAULT -> R.string.default_nfc_app_active
+            DefaultNfcAppChecker.Result.NOT_DEFAULT -> R.string.default_nfc_app_inactive
+            DefaultNfcAppChecker.Result.REQUESTED -> R.string.default_nfc_app_requested
+            DefaultNfcAppChecker.Result.NFC_NOT_READY -> R.string.default_nfc_app_not_ready
+            DefaultNfcAppChecker.Result.UNSUPPORTED -> R.string.default_nfc_app_unsupported
+            DefaultNfcAppChecker.Result.FAILED -> R.string.default_nfc_app_failed
+        })
+        defaultNfcAction?.apply {
+            visibility = if (defaultNfcStatus == DefaultNfcAppChecker.Result.NOT_DEFAULT) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
         }
     }
 
