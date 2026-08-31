@@ -6,6 +6,7 @@ internal object FelicaCodec {
     const val WRITE_COMMAND: Byte = 0x08
     const val WRITE_RESPONSE: Byte = 0x09
     const val READ_ONLY_SERVICE = 0x000B
+    const val MAX_READ_BLOCKS = 15
     val UNKNOWN_RESPONSE = byteArrayOf(0x04, 0x11, 0x45, 0x14)
 
     data class BlockAddress(val serviceIndex: Int, val blockNumber: Int)
@@ -74,6 +75,7 @@ internal object FelicaCodec {
         status2: Int = 0
     ): ByteArray {
         require(nfcid2.size == 8)
+        require(blocks.size <= MAX_READ_BLOCKS)
         val body = ByteArray(3 + blocks.size * 16)
         body[0] = status1.toByte()
         body[1] = status2.toByte()
@@ -99,7 +101,11 @@ internal object FelicaCodec {
 
     fun readRequest(nfcid2: ByteArray, blockNumbers: IntArray): ByteArray {
         require(nfcid2.size == 8)
-        require(blockNumbers.isNotEmpty() && blockNumbers.all { it in 0..0xFF })
+        require(
+            blockNumbers.isNotEmpty() &&
+                blockNumbers.size <= MAX_READ_BLOCKS &&
+                blockNumbers.all { it in 0..0xFF }
+        )
         return ByteArray(14 + blockNumbers.size * 2).also { frame ->
             frame[0] = frame.size.toByte()
             frame[1] = READ_COMMAND

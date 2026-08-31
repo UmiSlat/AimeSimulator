@@ -6,6 +6,8 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class FelicaCodecTest {
@@ -22,11 +24,31 @@ class FelicaCodecTest {
         val profile = requireNotNull(CardProfile.create(
             "Captured", "02FE123456789ABC", spad0 = "00112233445566778899AABBCCDDEEFF"))
         val image = CardImage(profile)
-        val response = FelicaCodec.readResponse(idm, listOf(image.read(0x00), image.read(0x82)))
+        val response = FelicaCodec.readResponse(
+            idm,
+            listOf(requireNotNull(image.read(0x00)), requireNotNull(image.read(0x82)))
+        )
         val decoded = requireNotNull(FelicaCodec.decodeReadResponse(response))
         assertEquals(2, decoded.blocks.size)
         assertEquals("00112233445566778899AABBCCDDEEFF", HexCodec.encode(decoded.blocks[0]))
         assertEquals("02FE123456789ABC", HexCodec.encode(decoded.blocks[1].copyOfRange(0, 8)))
+    }
+
+    @Test fun rejectsReadFramesThatCannotFitInOneByteLength() {
+        val blocks = List(FelicaCodec.MAX_READ_BLOCKS + 1) { ByteArray(16) }
+
+        assertThrows(IllegalArgumentException::class.java) {
+            FelicaCodec.readResponse(idm, blocks)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            FelicaCodec.readRequest(idm, IntArray(FelicaCodec.MAX_READ_BLOCKS + 1))
+        }
+    }
+
+    @Test fun missingImageBlocksAreNotReturnedAsZeroData() {
+        val profile = requireNotNull(CardProfile.create("Captured", "02FE123456789ABC"))
+
+        assertNull(CardImage(profile).read(0xFF))
     }
 
     @Test fun rejectsTruncatedFrame() {
