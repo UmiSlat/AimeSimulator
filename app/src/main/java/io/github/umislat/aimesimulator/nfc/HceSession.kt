@@ -43,28 +43,31 @@ internal class HceSession(private val context: Context) {
 
         val store = CardStore(context)
         val previousId = store.selectedProfile()?.profileId
-        if (!store.select(profile.profileId)) return report(Stage.EXCEPTION, "Selection could not be saved")
+        val selectionChanged = previousId != profile.profileId
+        if (selectionChanged && !store.select(profile.profileId)) {
+            return report(Stage.EXCEPTION, "Selection could not be saved")
+        }
 
         return try {
             val manager = NfcFCardEmulation.getInstance(nfcAdapter)
             manager.disableService(activity)
             if (!manager.setNfcid2ForService(component, profile.routedIdm(compatibilityMode))) {
-                restore(store, previousId)
+                restore(store, previousId, selectionChanged)
                 return report(Stage.ID, "NFCID2 registration failed")
             }
             if (!manager.registerSystemCodeForService(component, SYSTEM_CODE)) {
                 manager.disableService(activity)
-                restore(store, previousId)
+                restore(store, previousId, selectionChanged)
                 return report(Stage.SYSTEM_CODE, "System-code registration failed")
             }
             if (!manager.enableService(activity, component)) {
                 manager.disableService(activity)
-                restore(store, previousId)
+                restore(store, previousId, selectionChanged)
                 return report(Stage.ENABLE, "Foreground service activation failed")
             }
             report(Stage.READY, "Active: ${profile.label}")
         } catch (error: RuntimeException) {
-            restore(store, previousId)
+            restore(store, previousId, selectionChanged)
             runtimeFailure(error)
         }
     }
@@ -81,13 +84,11 @@ internal class HceSession(private val context: Context) {
         }
     }
 
-    private fun restore(store: CardStore, profileId: String?) {
-        store.select(profileId)
+    private fun restore(store: CardStore, profileId: String?, selectionChanged: Boolean) {
+        if (selectionChanged) store.select(profileId)
     }
 
-    private fun report(stage: Stage, detail: String): Report = Report(stage, detail).also {
-        CardStore(context).recordHceStatus(detail)
-    }
+    private fun report(stage: Stage, detail: String): Report = Report(stage, detail)
 
     private fun runtimeFailure(error: RuntimeException): Report {
         val cause = rootCause(error)
