@@ -26,6 +26,14 @@
     <string name="route_mode_original">原 IDm</string>
     <string name="route_mode_fixed">固定 02FE</string>
     <string name="route_mode_prefix">02FE + 后 12 位</string>
+    <string name="default_nfc_app">默认 NFC 应用</string>
+    <string name="default_nfc_app_active">AimeSimulator 已是默认非接触式支付应用。</string>
+    <string name="default_nfc_app_inactive">AimeSimulator 不是默认非接触式支付应用；切换后可能替换 Android 当前选中的钱包应用。</string>
+    <string name="default_nfc_app_requested">正在等待系统选择完成。</string>
+    <string name="default_nfc_app_not_ready">请开启 NFC 后再检查默认非接触式应用。</string>
+    <string name="default_nfc_app_unsupported">此设备不支持 Android 主机卡模拟。</string>
+    <string name="default_nfc_app_failed">Android 无法返回当前默认非接触式应用。</string>
+    <string name="set_default_nfc_app">设为默认 NFC 应用</string>
     <string name="card_profiles">卡片配置</string>
     <string name="add_manually">手动添加</string>
     <string name="read_physical_card">读取卡片</string>

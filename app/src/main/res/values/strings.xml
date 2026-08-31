@@ -26,6 +26,14 @@
     <string name="route_mode_original">Original</string>
     <string name="route_mode_fixed">Fixed 02FE</string>
     <string name="route_mode_prefix">02FE + suffix</string>
+    <string name="default_nfc_app">Default NFC app</string>
+    <string name="default_nfc_app_active">AimeSimulator is the default contactless payment app.</string>
+    <string name="default_nfc_app_inactive">AimeSimulator is not the default contactless payment app. Changing it may replace the wallet app currently selected by Android.</string>
+    <string name="default_nfc_app_requested">Waiting for the system selection to finish.</string>
+    <string name="default_nfc_app_not_ready">Turn on NFC to check the default contactless app.</string>
+    <string name="default_nfc_app_unsupported">This device does not support Android host card emulation.</string>
+    <string name="default_nfc_app_failed">Android could not report the current default contactless app.</string>
+    <string name="set_default_nfc_app">Set as default NFC app</string>
     <string name="card_profiles">Card profiles</string>
     <string name="add_manually">Add manually</string>
     <string name="read_physical_card">Read card</string>
