@@ -30,7 +30,7 @@ internal class CardImage(
         blocks[0x82] = idBlock
     }
 
-    fun read(number: Int): ByteArray = blocks[number]?.copyOf() ?: ByteArray(16)
+    fun read(number: Int): ByteArray? = blocks[number]?.copyOf()
 
     private fun fixedBlock(value: String): ByteArray {
         val source = HexCodec.decode(value) ?: return ByteArray(16)

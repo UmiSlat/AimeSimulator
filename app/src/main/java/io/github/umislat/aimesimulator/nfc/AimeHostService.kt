@@ -20,13 +20,15 @@ open class AimeHostService : HostNfcFService() {
                 val validServices = request.blocks.all { block ->
                     request.services.getOrNull(block.serviceIndex) == FelicaCodec.READ_ONLY_SERVICE
                 }
-                if (!validServices) {
+                if (!validServices || request.blocks.size > FelicaCodec.MAX_READ_BLOCKS) {
                     FelicaCodec.readResponse(request.nfcid2, emptyList(), 0x01, 0xA2)
                 } else {
-                    FelicaCodec.readResponse(
-                        request.nfcid2,
-                        request.blocks.map { image.read(it.blockNumber) }
-                    )
+                    val blocks = request.blocks.mapNotNull { image.read(it.blockNumber) }
+                    if (blocks.size != request.blocks.size) {
+                        FelicaCodec.readResponse(request.nfcid2, emptyList(), 0x01, 0xA2)
+                    } else {
+                        FelicaCodec.readResponse(request.nfcid2, blocks)
+                    }
                 }
             }
             FelicaCodec.WRITE_COMMAND -> FelicaCodec.writeResponse(request.nfcid2)
