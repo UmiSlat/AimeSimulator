@@ -19,8 +19,9 @@ internal object ThemeSettings {
         preferences(context).getString(KEY_THEME_MODE, null)
     )
 
-    fun setMode(context: Context, mode: Mode): Boolean =
-        preferences(context).edit().putString(KEY_THEME_MODE, mode.storedValue).commit()
+    fun setMode(context: Context, mode: Mode) {
+        preferences(context).edit().putString(KEY_THEME_MODE, mode.storedValue).apply()
+    }
 
     fun applyMode(context: Context) {
         AppCompatDelegate.setDefaultNightMode(mode(context).nightMode)
@@ -29,8 +30,9 @@ internal object ThemeSettings {
     fun dynamicColorsEnabled(context: Context): Boolean =
         preferences(context).getBoolean(KEY_DYNAMIC_COLORS, true)
 
-    fun setDynamicColorsEnabled(context: Context, enabled: Boolean): Boolean =
-        preferences(context).edit().putBoolean(KEY_DYNAMIC_COLORS, enabled).commit()
+    fun setDynamicColorsEnabled(context: Context, enabled: Boolean) {
+        preferences(context).edit().putBoolean(KEY_DYNAMIC_COLORS, enabled).apply()
+    }
 
     private fun preferences(context: Context) = context.applicationContext.getSharedPreferences(
         PREFERENCES,
