@@ -53,6 +53,7 @@ internal class CardStore(context: Context) {
 
     @Synchronized
     fun select(profileId: String?): Boolean {
+        if (preferences.getString(KEY_SELECTED, null) == profileId) return true
         val editor = preferences.edit()
         if (profileId == null) editor.remove(KEY_SELECTED) else editor.putString(KEY_SELECTED, profileId)
         return editor.commit()
@@ -77,12 +78,6 @@ internal class CardStore(context: Context) {
     fun setShowAccessCode(enabled: Boolean) {
         preferences.edit().putBoolean(KEY_SHOW_ACCESS_CODE, enabled).apply()
     }
-
-    fun recordHceStatus(message: String) {
-        preferences.edit().putString(KEY_HCE_STATUS, message).apply()
-    }
-
-    fun hceStatus(): String = preferences.getString(KEY_HCE_STATUS, "Not configured").orEmpty()
 
     private fun writeProfiles(profiles: List<CardProfile>): Boolean =
         preferences.edit().putString(KEY_PROFILES, encodeProfiles(profiles)).commit()
@@ -178,7 +173,6 @@ internal class CardStore(context: Context) {
         private const val KEY_IDM_ROUTE_MODE = "idm_route_mode"
         private const val KEY_SHOW_IDM = "show_idm"
         private const val KEY_SHOW_ACCESS_CODE = "show_access_code"
-        private const val KEY_HCE_STATUS = "last_hce_status"
         private const val KEY_MIGRATION_DONE = "storage_migrated"
     }
 }
