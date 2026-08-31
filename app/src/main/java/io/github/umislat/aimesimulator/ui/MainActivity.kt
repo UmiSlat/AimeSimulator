@@ -510,10 +510,8 @@ class MainActivity : AppCompatActivity() {
             isChecked = dynamicAvailable && ThemeSettings.dynamicColorsEnabled(this@MainActivity)
             isEnabled = dynamicAvailable
             setOnCheckedChangeListener { button, enabled ->
-                if (button.isPressed && ThemeSettings.setDynamicColorsEnabled(
-                        this@MainActivity,
-                        enabled
-                    )) {
+                if (button.isPressed) {
+                    ThemeSettings.setDynamicColorsEnabled(this@MainActivity, enabled)
                     recreate()
                 }
             }
@@ -578,8 +576,8 @@ class MainActivity : AppCompatActivity() {
                     darkId -> ThemeSettings.Mode.DARK
                     else -> ThemeSettings.Mode.SYSTEM
                 }
-                if (mode != ThemeSettings.mode(this@MainActivity) &&
-                    ThemeSettings.setMode(this@MainActivity, mode)) {
+                if (mode != ThemeSettings.mode(this@MainActivity)) {
+                    ThemeSettings.setMode(this@MainActivity, mode)
                     AppCompatDelegate.setDefaultNightMode(mode.nightMode)
                 }
             }
