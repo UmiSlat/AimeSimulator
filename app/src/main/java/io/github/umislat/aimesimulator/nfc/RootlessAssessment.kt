@@ -13,6 +13,7 @@ internal data class RootlessAssessment(
         UNSUPPORTED,
         NFC_DISABLED,
         SERVICE_RESTARTING,
+        STORAGE_FAILED,
         DYNAMIC_ID_REJECTED,
         COMPATIBILITY_ID_REJECTED,
         SYSTEM_CODE_REJECTED,
@@ -37,6 +38,7 @@ internal data class RootlessAssessment(
                 HceSession.Stage.UNSUPPORTED -> Outcome.UNSUPPORTED
                 HceSession.Stage.NFC_DISABLED -> Outcome.NFC_DISABLED
                 HceSession.Stage.SERVICE_RESTARTING -> Outcome.SERVICE_RESTARTING
+                HceSession.Stage.STORAGE -> Outcome.STORAGE_FAILED
                 HceSession.Stage.ID -> if (routeMode != IdmRouteMode.ORIGINAL) {
                     Outcome.COMPATIBILITY_ID_REJECTED
                 } else {

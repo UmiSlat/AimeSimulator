@@ -95,6 +95,7 @@
     <string name="hce_unsupported">This device does not support NFC-F host card emulation.</string>
     <string name="hce_waiting_for_service">Waiting for the NFC service to restart…</string>
     <string name="hce_service_restart_timeout">The NFC service did not recover. Toggle NFC or restart the device.</string>
+    <string name="hce_storage_failed">The selected card profile could not be saved.</string>
     <string name="hce_nfcid2_rejected">Android rejected the current NFCID2. See the rootless check on the Status page.</string>
     <string name="hce_system_code_rejected">Android rejected the System Code 88B4 required by AIME.</string>
     <string name="hce_enable_failed">Android could not enable the foreground HCE-F service.</string>
@@ -128,6 +129,8 @@
     <string name="rootless_nfc_disabled_detail">Turn NFC on and return to the app; the check will run again automatically.</string>
     <string name="rootless_checking_title">Waiting to check</string>
     <string name="rootless_checking_detail">The NFC service is starting or recovering. The app will retry a limited number of times.</string>
+    <string name="rootless_storage_title">Card selection could not be saved</string>
+    <string name="rootless_storage_detail">Android rejected the local profile selection update. Check available storage and app data access, then try again.</string>
     <string name="rootless_dynamic_id_title">Dynamic IDm rejected</string>
     <string name="rootless_dynamic_id_detail">The card IDm did not pass system validation. Try either compatibility mode. If LSPosed was just enabled or its scope changed, reboot first so the hook loads with com.android.nfc.</string>
     <string name="rootless_compatibility_id_title">Compatibility IDm rejected</string>
@@ -141,6 +144,7 @@
     <string name="rootless_error_title">Check failed unexpectedly</string>
     <string name="rootless_error_detail">The NFC system returned: %1$s</string>
     <string name="rootless_unknown_error">Unknown error</string>
+    <string name="value_unavailable">Unavailable</string>
     <string name="generic_hcef_idle">A separate service can emulate the selected card using only static, Android-compatible HCE-F metadata. It does not dynamically register an IDm or System Code.</string>
     <string name="generic_hcef_active">Default 4000 HCE-F card emulation active</string>
     <string name="generic_hcef_ready">The selected image is active. Expected IDm: %1$s; RF and block 85 System Code: 4000; PMm: %2$s. Keep the app foreground. This mode only tests whether the cabinet accepts an internally consistent 4000 card.</string>

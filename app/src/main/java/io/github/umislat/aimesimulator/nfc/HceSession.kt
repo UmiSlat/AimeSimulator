@@ -14,7 +14,8 @@ import io.github.umislat.aimesimulator.data.IdmRouteMode
 
 internal class HceSession(private val context: Context) {
     enum class Stage {
-        READY, UNSUPPORTED, NFC_DISABLED, SERVICE_RESTARTING, ID, SYSTEM_CODE, ENABLE, EXCEPTION
+        READY, UNSUPPORTED, NFC_DISABLED, SERVICE_RESTARTING, STORAGE, ID, SYSTEM_CODE, ENABLE,
+        EXCEPTION
     }
 
     data class Report(val stage: Stage, val detail: String = "") {
@@ -39,12 +40,12 @@ internal class HceSession(private val context: Context) {
         systemCode: String = SYSTEM_CODE
     ): Report {
         if (!context.packageManager.hasSystemFeature(PackageManager.FEATURE_NFC_HOST_CARD_EMULATION_NFCF)) {
-            return report(Stage.UNSUPPORTED, "HCE-F is unavailable")
+            return report(Stage.UNSUPPORTED)
         }
         val nfcAdapter = resolveAdapter()
-            ?: return report(Stage.SERVICE_RESTARTING, "NFC service is restarting")
+            ?: return report(Stage.SERVICE_RESTARTING)
         try {
-            if (!nfcAdapter.isEnabled) return report(Stage.NFC_DISABLED, "NFC is disabled")
+            if (!nfcAdapter.isEnabled) return report(Stage.NFC_DISABLED)
         } catch (error: RuntimeException) {
             return runtimeFailure(error)
         }
@@ -53,7 +54,7 @@ internal class HceSession(private val context: Context) {
         val previousId = store.selectedProfile()?.profileId
         val selectionChanged = previousId != profile.profileId
         if (selectionChanged && !store.select(profile.profileId)) {
-            return report(Stage.EXCEPTION, "Selection could not be saved")
+            return report(Stage.STORAGE)
         }
 
         return try {
@@ -61,19 +62,19 @@ internal class HceSession(private val context: Context) {
             manager.disableService(activity)
             if (!manager.setNfcid2ForService(component, profile.routedIdm(routeMode))) {
                 restore(store, previousId, selectionChanged)
-                return report(Stage.ID, "NFCID2 registration failed")
+                return report(Stage.ID)
             }
             if (!manager.registerSystemCodeForService(component, systemCode)) {
                 manager.disableService(activity)
                 restore(store, previousId, selectionChanged)
-                return report(Stage.SYSTEM_CODE, "System-code $systemCode registration failed")
+                return report(Stage.SYSTEM_CODE)
             }
             if (!manager.enableService(activity, component)) {
                 manager.disableService(activity)
                 restore(store, previousId, selectionChanged)
-                return report(Stage.ENABLE, "Foreground service activation failed")
+                return report(Stage.ENABLE)
             }
-            report(Stage.READY, "Active: ${profile.label}")
+            report(Stage.READY)
         } catch (error: RuntimeException) {
             restore(store, previousId, selectionChanged)
             runtimeFailure(error)
@@ -87,12 +88,12 @@ internal class HceSession(private val context: Context) {
 
     fun activateStaticAimeDiagnostic(activity: Activity): Report {
         if (!context.packageManager.hasSystemFeature(PackageManager.FEATURE_NFC_HOST_CARD_EMULATION_NFCF)) {
-            return report(Stage.UNSUPPORTED, "HCE-F is unavailable")
+            return report(Stage.UNSUPPORTED)
         }
         val nfcAdapter = resolveAdapter()
-            ?: return report(Stage.SERVICE_RESTARTING, "NFC service is restarting")
+            ?: return report(Stage.SERVICE_RESTARTING)
         try {
-            if (!nfcAdapter.isEnabled) return report(Stage.NFC_DISABLED, "NFC is disabled")
+            if (!nfcAdapter.isEnabled) return report(Stage.NFC_DISABLED)
         } catch (error: RuntimeException) {
             return runtimeFailure(error)
         }
@@ -102,19 +103,19 @@ internal class HceSession(private val context: Context) {
             manager.disableService(activity)
             val parsedIdm = manager.getNfcid2ForService(staticAimeComponent)
             if (!STATIC_AIME_IDM.equals(parsedIdm, ignoreCase = true)) {
-                return report(Stage.ID, "Static NFCID2 parsed as ${parsedIdm ?: "none"}")
+                return report(Stage.ID, parsedIdm.orEmpty())
             }
             val parsedSystemCode = manager.getSystemCodeForService(staticAimeComponent)
             if (!SYSTEM_CODE.equals(parsedSystemCode, ignoreCase = true)) {
                 return report(
                     Stage.SYSTEM_CODE,
-                    "Static 88B4 parsed as ${parsedSystemCode ?: "none"}"
+                    parsedSystemCode.orEmpty()
                 )
             }
             if (!manager.enableService(activity, staticAimeComponent)) {
-                return report(Stage.ENABLE, "Static 88B4 foreground activation failed")
+                return report(Stage.ENABLE)
             }
-            report(Stage.READY, "Static 88B4 service enabled")
+            report(Stage.READY)
         } catch (error: RuntimeException) {
             runtimeFailure(error)
         }
@@ -122,12 +123,12 @@ internal class HceSession(private val context: Context) {
 
     fun activateDefaultHcefCard(activity: Activity): Report {
         if (!context.packageManager.hasSystemFeature(PackageManager.FEATURE_NFC_HOST_CARD_EMULATION_NFCF)) {
-            return report(Stage.UNSUPPORTED, "HCE-F is unavailable")
+            return report(Stage.UNSUPPORTED)
         }
         val nfcAdapter = resolveAdapter()
-            ?: return report(Stage.SERVICE_RESTARTING, "NFC service is restarting")
+            ?: return report(Stage.SERVICE_RESTARTING)
         try {
-            if (!nfcAdapter.isEnabled) return report(Stage.NFC_DISABLED, "NFC is disabled")
+            if (!nfcAdapter.isEnabled) return report(Stage.NFC_DISABLED)
         } catch (error: RuntimeException) {
             return runtimeFailure(error)
         }
@@ -137,19 +138,19 @@ internal class HceSession(private val context: Context) {
             manager.disableService(activity)
             val parsedIdm = manager.getNfcid2ForService(defaultHcefComponent)
             if (!DEFAULT_HCEF_IDM.equals(parsedIdm, ignoreCase = true)) {
-                return report(Stage.ID, "Default NFCID2 parsed as ${parsedIdm ?: "none"}")
+                return report(Stage.ID, parsedIdm.orEmpty())
             }
             val parsedSystemCode = manager.getSystemCodeForService(defaultHcefComponent)
             if (!GENERIC_SYSTEM_CODE.equals(parsedSystemCode, ignoreCase = true)) {
                 return report(
                     Stage.SYSTEM_CODE,
-                    "Default 4000 parsed as ${parsedSystemCode ?: "none"}"
+                    parsedSystemCode.orEmpty()
                 )
             }
             if (!manager.enableService(activity, defaultHcefComponent)) {
-                return report(Stage.ENABLE, "Default HCE-F card activation failed")
+                return report(Stage.ENABLE)
             }
-            report(Stage.READY, "Default HCE-F card service enabled")
+            report(Stage.READY)
         } catch (error: RuntimeException) {
             runtimeFailure(error)
         }
@@ -166,7 +167,7 @@ internal class HceSession(private val context: Context) {
         if (selectionChanged) store.select(profileId)
     }
 
-    private fun report(stage: Stage, detail: String): Report = Report(stage, detail)
+    private fun report(stage: Stage, detail: String = ""): Report = Report(stage, detail)
 
     private fun runtimeFailure(error: RuntimeException): Report {
         val cause = rootCause(error)
@@ -175,7 +176,7 @@ internal class HceSession(private val context: Context) {
             cause.javaClass.name == "android.os.DeadSystemException" ||
             cause.message.orEmpty().contains("DeadObjectException", ignoreCase = true)
         ) {
-            report(Stage.SERVICE_RESTARTING, "NFC service is restarting")
+            report(Stage.SERVICE_RESTARTING)
         } else {
             val detail = cause.message?.takeIf(String::isNotBlank)
                 ?.let { "${cause.javaClass.simpleName}: $it" }

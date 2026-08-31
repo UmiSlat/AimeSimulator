@@ -39,7 +39,7 @@ internal data class CardProfile(
                     .takeIf { it.length == 20 && it.all(Char::isDigit) }
                     ?: return null
             }
-            val cleanLabel = label.trim().ifEmpty { "Card ${cleanIdm.takeLast(4)}" }
+            val cleanLabel = label.trim().ifEmpty { "IDm ${cleanIdm.takeLast(4)}" }
             return CardProfile(
                 profileId,
                 cleanLabel,
@@ -52,7 +52,7 @@ internal data class CardProfile(
 
         fun fallback(): CardProfile = CardProfile(
             profileId = "built-in-fallback",
-            label = "Default",
+            label = "IDm 0000",
             idm = DEFAULT_IDM
         )
     }

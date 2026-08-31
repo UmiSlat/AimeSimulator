@@ -57,7 +57,7 @@ class CardProfileTest {
             accessCode = "5012 3456 7890 1234 5678"
         ))
 
-        assertEquals("Card 5566", profile.label)
+        assertEquals("IDm 5566", profile.label)
         assertEquals("012E112233445566", profile.idm)
         assertEquals("FE27165A9396EEC9E43AA991FD3D8CAF", profile.spad0)
         assertEquals("50123456789012345678", profile.accessCode)

@@ -819,10 +819,14 @@ class MainActivity : AppCompatActivity() {
                     getString(R.string.hce_waiting_for_service)
                 } else getString(R.string.hce_service_restart_timeout)
             }
+            HceSession.Stage.STORAGE -> getString(R.string.hce_storage_failed)
             HceSession.Stage.ID -> getString(R.string.hce_nfcid2_rejected)
             HceSession.Stage.SYSTEM_CODE -> getString(R.string.hce_system_code_rejected)
             HceSession.Stage.ENABLE -> getString(R.string.hce_enable_failed)
-            HceSession.Stage.EXCEPTION -> getString(R.string.hce_failed, report.detail)
+            HceSession.Stage.EXCEPTION -> getString(
+                R.string.hce_failed,
+                report.detail.ifBlank { getString(R.string.rootless_unknown_error) }
+            )
         }
         setHceStatus(message)
         renderRootlessAssessment()
@@ -841,7 +845,7 @@ class MainActivity : AppCompatActivity() {
         defaultHcefReport = report
         setHceStatus(
             if (report.succeeded) getString(R.string.generic_hcef_active)
-            else getString(R.string.generic_hcef_failed, report.detail)
+            else defaultHcefMessage(report)
         )
         renderDiagnosticReports()
     }
@@ -853,7 +857,7 @@ class MainActivity : AppCompatActivity() {
         staticDiagnosticReport = report
         setHceStatus(
             if (report.succeeded) getString(R.string.static_hcef_active)
-            else getString(R.string.static_hcef_failed, report.detail)
+            else staticHcefMessage(report)
         )
         renderDiagnosticReports()
     }
@@ -891,6 +895,8 @@ class MainActivity : AppCompatActivity() {
                 R.string.rootless_nfc_disabled_title to R.string.rootless_nfc_disabled_detail
             RootlessAssessment.Outcome.SERVICE_RESTARTING ->
                 R.string.rootless_checking_title to R.string.rootless_checking_detail
+            RootlessAssessment.Outcome.STORAGE_FAILED ->
+                R.string.rootless_storage_title to R.string.rootless_storage_detail
             RootlessAssessment.Outcome.DYNAMIC_ID_REJECTED ->
                 R.string.rootless_dynamic_id_title to R.string.rootless_dynamic_id_detail
             RootlessAssessment.Outcome.COMPATIBILITY_ID_REJECTED -> if (
@@ -923,47 +929,64 @@ class MainActivity : AppCompatActivity() {
 
     private fun renderDefaultHcefCard() {
         val report = defaultHcefReport
-        defaultHcefStatusView?.text = when (report?.stage) {
-            null -> getString(R.string.generic_hcef_idle)
-            HceSession.Stage.READY -> getString(
-                R.string.generic_hcef_ready,
-                CardProfile.COMPATIBILITY_IDM.chunked(4).joinToString(" "),
-                STANDARD_PMM_DISPLAY
-            )
-            HceSession.Stage.UNSUPPORTED -> getString(R.string.rootless_unsupported_detail)
-            HceSession.Stage.NFC_DISABLED -> getString(R.string.rootless_nfc_disabled_detail)
-            HceSession.Stage.SERVICE_RESTARTING -> getString(R.string.rootless_checking_detail)
-            HceSession.Stage.ID -> getString(R.string.generic_hcef_id_rejected)
-            HceSession.Stage.SYSTEM_CODE -> getString(R.string.generic_hcef_system_code_rejected)
-            HceSession.Stage.ENABLE -> getString(R.string.generic_hcef_enable_failed)
-            HceSession.Stage.EXCEPTION -> getString(
-                R.string.generic_hcef_failed,
-                report.detail.ifBlank { getString(R.string.rootless_unknown_error) }
-            )
+        defaultHcefStatusView?.text = if (report == null) {
+            getString(R.string.generic_hcef_idle)
+        } else {
+            defaultHcefMessage(report)
         }
+    }
+
+    private fun defaultHcefMessage(report: HceSession.Report): String = when (report.stage) {
+        HceSession.Stage.READY -> getString(
+            R.string.generic_hcef_ready,
+            CardProfile.COMPATIBILITY_IDM.chunked(4).joinToString(" "),
+            STANDARD_PMM_DISPLAY
+        )
+        HceSession.Stage.UNSUPPORTED -> getString(R.string.rootless_unsupported_detail)
+        HceSession.Stage.NFC_DISABLED -> getString(R.string.rootless_nfc_disabled_detail)
+        HceSession.Stage.SERVICE_RESTARTING -> getString(R.string.rootless_checking_detail)
+        HceSession.Stage.STORAGE -> getString(R.string.hce_storage_failed)
+        HceSession.Stage.ID -> getString(R.string.generic_hcef_id_rejected)
+        HceSession.Stage.SYSTEM_CODE -> getString(R.string.generic_hcef_system_code_rejected)
+        HceSession.Stage.ENABLE -> getString(R.string.generic_hcef_enable_failed)
+        HceSession.Stage.EXCEPTION -> getString(
+            R.string.generic_hcef_failed,
+            report.detail.ifBlank { getString(R.string.rootless_unknown_error) }
+        )
     }
 
     private fun renderStaticDiagnostic() {
         val report = staticDiagnosticReport
-        staticDiagnosticStatusView?.text = when (report?.stage) {
-            null -> getString(R.string.static_hcef_idle)
-            HceSession.Stage.READY -> getString(
-                R.string.static_hcef_ready,
-                HceSession.STATIC_AIME_IDM.chunked(4).joinToString(" "),
-                STANDARD_PMM_DISPLAY
-            )
-            HceSession.Stage.UNSUPPORTED -> getString(R.string.rootless_unsupported_detail)
-            HceSession.Stage.NFC_DISABLED -> getString(R.string.rootless_nfc_disabled_detail)
-            HceSession.Stage.SERVICE_RESTARTING -> getString(R.string.rootless_checking_detail)
-            HceSession.Stage.ID -> getString(R.string.static_hcef_id_removed, report.detail)
-            HceSession.Stage.SYSTEM_CODE ->
-                getString(R.string.static_hcef_system_code_removed, report.detail)
-            HceSession.Stage.ENABLE -> getString(R.string.static_hcef_enable_failed)
-            HceSession.Stage.EXCEPTION -> getString(
-                R.string.static_hcef_failed,
-                report.detail.ifBlank { getString(R.string.rootless_unknown_error) }
-            )
+        staticDiagnosticStatusView?.text = if (report == null) {
+            getString(R.string.static_hcef_idle)
+        } else {
+            staticHcefMessage(report)
         }
+    }
+
+    private fun staticHcefMessage(report: HceSession.Report): String = when (report.stage) {
+        HceSession.Stage.READY -> getString(
+            R.string.static_hcef_ready,
+            HceSession.STATIC_AIME_IDM.chunked(4).joinToString(" "),
+            STANDARD_PMM_DISPLAY
+        )
+        HceSession.Stage.UNSUPPORTED -> getString(R.string.rootless_unsupported_detail)
+        HceSession.Stage.NFC_DISABLED -> getString(R.string.rootless_nfc_disabled_detail)
+        HceSession.Stage.SERVICE_RESTARTING -> getString(R.string.rootless_checking_detail)
+        HceSession.Stage.STORAGE -> getString(R.string.hce_storage_failed)
+        HceSession.Stage.ID -> getString(
+            R.string.static_hcef_id_removed,
+            report.detail.ifBlank { getString(R.string.value_unavailable) }
+        )
+        HceSession.Stage.SYSTEM_CODE -> getString(
+            R.string.static_hcef_system_code_removed,
+            report.detail.ifBlank { getString(R.string.value_unavailable) }
+        )
+        HceSession.Stage.ENABLE -> getString(R.string.static_hcef_enable_failed)
+        HceSession.Stage.EXCEPTION -> getString(
+            R.string.static_hcef_failed,
+            report.detail.ifBlank { getString(R.string.rootless_unknown_error) }
+        )
     }
 
     private fun scheduleActivationRetry(attempt: Int) {
