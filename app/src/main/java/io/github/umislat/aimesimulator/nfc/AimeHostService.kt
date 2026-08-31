@@ -33,11 +33,18 @@ class AimeHostService : HostNfcFService() {
                 }
             }
             FelicaCodec.WRITE_COMMAND -> FelicaCodec.writeResponse(request.nfcid2)
-            else -> FelicaCodec.UNKNOWN_RESPONSE.copyOf()
+            else -> null
         }
 
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, "command=%02X request=%d response=%d".format(request.command, commandPacket.size, response.size))
+            Log.d(
+                TAG,
+                "command=%02X request=%d response=%d".format(
+                    request.command,
+                    commandPacket.size,
+                    response?.size ?: 0
+                )
+            )
         }
         return response
     }

@@ -7,7 +7,6 @@ internal object FelicaCodec {
     const val WRITE_RESPONSE: Byte = 0x09
     const val READ_ONLY_SERVICE = 0x000B
     const val MAX_READ_BLOCKS = 15
-    val UNKNOWN_RESPONSE = byteArrayOf(0x04, 0x11, 0x45, 0x14)
 
     data class BlockAddress(val serviceIndex: Int, val blockNumber: Int)
 
