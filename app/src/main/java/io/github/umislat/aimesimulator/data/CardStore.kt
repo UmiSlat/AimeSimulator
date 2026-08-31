@@ -9,13 +9,24 @@ import java.io.File
 internal class CardStore(context: Context) {
     private val appContext = context.applicationContext
     private val preferences = appContext.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+    private var cachedProfilesInitialized = false
+    private var cachedProfilesSource: String? = null
+    private var cachedProfiles = emptyList<CardProfile>()
 
     init {
         migrateExistingInstallation()
     }
 
     @Synchronized
-    fun profiles(): List<CardProfile> = decodeProfiles(preferences.getString(KEY_PROFILES, null))
+    fun profiles(): List<CardProfile> {
+        val encoded = preferences.getString(KEY_PROFILES, null)
+        if (cachedProfilesInitialized && encoded == cachedProfilesSource) return cachedProfiles
+        return decodeProfiles(encoded).also { profiles ->
+            cachedProfilesSource = encoded
+            cachedProfiles = profiles
+            cachedProfilesInitialized = true
+        }
+    }
 
     @Synchronized
     fun selectedProfile(): CardProfile? {
