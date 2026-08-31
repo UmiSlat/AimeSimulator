@@ -86,7 +86,12 @@
     <string name="hce_unsupported">此设备不支持 NFC-F 主机卡模拟。</string>
     <string name="hce_waiting_for_service">正在等待 NFC 服务重启…</string>
     <string name="hce_service_restart_timeout">NFC 服务未能恢复，请切换 NFC 或重启设备。</string>
+    <string name="hce_storage_failed">无法保存当前选中的卡片配置。</string>
+    <string name="hce_nfcid2_rejected">系统拒绝了当前 NFCID2。</string>
+    <string name="hce_system_code_rejected">系统拒绝了 AIME 所需的 System Code 88B4。</string>
+    <string name="hce_enable_failed">Android 未能启用前台 HCE-F 服务。</string>
     <string name="hce_failed">HCE-F 配置失败：%1$s</string>
+    <string name="hce_unknown_error">未知错误</string>
     <string name="nfc_unavailable">此设备没有 NFC 适配器。</string>
     <string name="nfc_disabled">NFC 已关闭。</string>
     <string name="hold_card_near_phone">请将 FeliCa、Amusement IC 或旧式 MIFARE Aime 卡贴近手机的 NFC 天线位置。</string>

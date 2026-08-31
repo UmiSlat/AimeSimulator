@@ -87,7 +87,12 @@
     <string name="hce_unsupported">This device does not support NFC-F host card emulation.</string>
     <string name="hce_waiting_for_service">Waiting for the NFC service to restart…</string>
     <string name="hce_service_restart_timeout">The NFC service did not recover. Toggle NFC or restart the device.</string>
+    <string name="hce_storage_failed">The selected card profile could not be saved.</string>
+    <string name="hce_nfcid2_rejected">Android rejected the current NFCID2.</string>
+    <string name="hce_system_code_rejected">Android rejected the System Code 88B4 required by AIME.</string>
+    <string name="hce_enable_failed">Android could not enable the foreground HCE-F service.</string>
     <string name="hce_failed">HCE-F setup failed: %1$s</string>
+    <string name="hce_unknown_error">Unknown error</string>
     <string name="nfc_unavailable">This device has no NFC adapter.</string>
     <string name="nfc_disabled">NFC is turned off.</string>
     <string name="hold_card_near_phone">Hold a FeliCa, Amusement IC, or legacy MIFARE Aime card near the NFC antenna.</string>

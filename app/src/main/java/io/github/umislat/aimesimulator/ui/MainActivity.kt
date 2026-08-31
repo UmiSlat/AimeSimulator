@@ -696,7 +696,14 @@ class MainActivity : AppCompatActivity() {
                     getString(R.string.hce_waiting_for_service)
                 } else getString(R.string.hce_service_restart_timeout)
             }
-            else -> getString(R.string.hce_failed, report.detail)
+            HceSession.Stage.STORAGE -> getString(R.string.hce_storage_failed)
+            HceSession.Stage.ID -> getString(R.string.hce_nfcid2_rejected)
+            HceSession.Stage.SYSTEM_CODE -> getString(R.string.hce_system_code_rejected)
+            HceSession.Stage.ENABLE -> getString(R.string.hce_enable_failed)
+            HceSession.Stage.EXCEPTION -> getString(
+                R.string.hce_failed,
+                report.detail.ifBlank { getString(R.string.hce_unknown_error) }
+            )
         }
         setHceStatus(message)
     }
