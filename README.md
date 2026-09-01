@@ -364,6 +364,7 @@ app/
 ksu-module/                  KernelSU 模块脚本和元数据
 tools/                       诊断、模块打包与产物校验工具
 docs/FUNCTIONAL_SPEC.md      可观察行为与协议约定
+docs/PROVENANCE.md           实现来源对照与许可边界
 docs/RELEASE.md              GitHub Actions 与签名发布流程
 THIRD_PARTY_NOTICES.md       第三方依赖及其许可证
 ```
@@ -378,7 +379,7 @@ THIRD_PARTY_NOTICES.md       第三方依赖及其许可证
 
 ## 实现参考、版权与第三方组件
 
-AIC 卡片指纹、FeliCa Block 0 读取和 SPAD0 变换行为参考并核对了 [Project-HINATA/hinata_go](https://github.com/Project-HINATA/hinata_go/tree/c56d8badc3a720e0ba9e2f721f3f73111f2f6d97) 的公开实现。项目不包含该应用的预编译二进制文件；具体参考范围和许可注意事项见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。
+AIC 卡片指纹、FeliCa Block 0 读取和 SPAD0 变换行为参考并核对了 [Project-HINATA/hinata_go](https://github.com/Project-HINATA/hinata_go/tree/c56d8badc3a720e0ba9e2f721f3f73111f2f6d97) 的公开实现；固定卡片镜像数据可追溯到旧版 [UmiSlat/AICEmu](https://github.com/UmiSlat/AICEmu/tree/5a1ecc28e98541e8226e1e92b07bd2747e607bb3)。项目不包含这些应用的预编译二进制文件，但部分表数据和模板值存在直接对应关系。逐文件核对结果见 [`docs/PROVENANCE.md`](docs/PROVENANCE.md)，第三方组件说明见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。
 
 Dobby、libxposed API、AndroidX、Material Components、Kotlin 和测试依赖分别遵循其自身许可证。
 
