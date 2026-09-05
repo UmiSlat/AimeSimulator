@@ -25,7 +25,7 @@ jobs:
         env:
           ANDROID_SIGNING_KEY: ${{ secrets.ANDROID_SIGNING_KEY }}
         run: |
-          version_name=$(sed -n "s/^[[:space:]]*versionName '\([^']*\)'.*/\1/p" app/build.gradle)
+          version_name=$(awk -F "'" '/^[[:space:]]*versionName[[:space:]]*=/{print $2; exit}' app/build.gradle)
           test -n "$version_name"
           test "$GITHUB_REF_NAME" = "v${version_name}" || {
             echo "Tag ${GITHUB_REF_NAME} does not match app version ${version_name}." >&2
@@ -52,8 +52,8 @@ jobs:
       - name: Install Android build packages
         run: |
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
-            "platforms;android-34" \
-            "build-tools;34.0.0" \
+            "platforms;android-36" \
+            "build-tools;36.1.0" \
             "ndk;25.1.8937393" \
             "cmake;3.22.1"
 
@@ -70,7 +70,7 @@ jobs:
           version_name=${GITHUB_REF_NAME#v}
           release_apk="dist/AimeSimulator-${version_name}-release.apk"
           cp app/build/outputs/apk/release/app-release.apk "$release_apk"
-          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose --print-certs "$release_apk"
+          "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose --print-certs "$release_apk"
           cd dist
           sha256sum "$(basename "$release_apk")" > "$(basename "$release_apk").sha256"
 

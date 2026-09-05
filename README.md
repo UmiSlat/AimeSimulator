@@ -310,10 +310,13 @@ Android 15+ 中，开启补丁后日志应出现类似 `patched ST HAL CORE_SET_
 ### 环境要求
 
 - JDK 17
-- Android SDK 34
-- Android NDK（arm64 工具链）
+- Gradle Wrapper 8.14.5（仓库已包含，无需安装系统 Gradle）
+- Android SDK Platform 36 与 Build Tools 36.1.0
+- Android NDK 25.1.8937393（arm64 工具链）
 - CMake 3.22.1
 - Python 3
+
+项目使用 Android Gradle Plugin 8.13.2 与 Kotlin 2.3.21。请使用仓库中的 `gradlew` / `gradlew.bat`，避免系统 Gradle 版本不一致。
 
 首次构建需要从 Google Maven 和 Maven Central 下载 AndroidX、Material Components、libxposed API 与 Dobby 等依赖。
 

@@ -15,16 +15,18 @@ def hasReleaseSigning = [
 ].every { value -> value != null && !value.isBlank() }
 
 android {
-    namespace 'io.github.umislat.aimesimulator'
-    compileSdk 34
+    namespace = 'io.github.umislat.aimesimulator'
+    compileSdk = 36
+    buildToolsVersion = '36.1.0'
+    ndkVersion = '25.1.8937393'
 
     defaultConfig {
-        applicationId 'io.github.umislat.aimesimulator'
-        minSdk 29
-        targetSdk 34
-        versionCode 25
-        versionName '2.2.5'
-        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+        applicationId = 'io.github.umislat.aimesimulator'
+        minSdk = 29
+        targetSdk = 36
+        versionCode = 25
+        versionName = '2.2.5'
+        testInstrumentationRunner = 'androidx.test.runner.AndroidJUnitRunner'
 
         externalNativeBuild {
             cmake {
@@ -37,10 +39,10 @@ android {
     signingConfigs {
         if (hasReleaseSigning) {
             release {
-                storeFile file(releaseKeystoreFile)
-                storePassword releaseKeystorePassword
-                keyAlias releaseKeyAlias
-                keyPassword releaseKeyPassword
+                storeFile = file(releaseKeystoreFile)
+                storePassword = releaseKeystorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
             }
         }
     }
@@ -48,45 +50,47 @@ android {
     buildTypes {
         release {
             if (hasReleaseSigning) {
-                signingConfig signingConfigs.release
+                signingConfig = signingConfigs.release
             }
-            minifyEnabled false
+            minifyEnabled = false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = '17'
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     externalNativeBuild {
         cmake {
-            path file('CMakeLists.txt')
-            version '3.22.1'
+            path = file('CMakeLists.txt')
+            version = '3.22.1'
         }
     }
 
     buildFeatures {
-        buildConfig true
-        prefab true
+        buildConfig = true
+        prefab = true
     }
 
-    packagingOptions {
+    packaging {
         resources {
             merges += 'META-INF/xposed/*'
         }
         jniLibs {
-            useLegacyPackaging true
+            useLegacyPackaging = true
         }
     }
 
     lint {
         disable 'GradleDependency', 'ObsoleteSdkInt'
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
 }
 

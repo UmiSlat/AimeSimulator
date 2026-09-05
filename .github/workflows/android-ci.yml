@@ -37,8 +37,8 @@ jobs:
       - name: Install Android build packages
         run: |
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
-            "platforms;android-34" \
-            "build-tools;34.0.0" \
+            "platforms;android-36" \
+            "build-tools;36.1.0" \
             "ndk;25.1.8937393" \
             "cmake;3.22.1"
 
@@ -52,7 +52,7 @@ jobs:
 
       - name: Prepare CI artifact
         run: |
-          version_name=$(sed -n "s/^[[:space:]]*versionName '\([^']*\)'.*/\1/p" app/build.gradle)
+          version_name=$(awk -F "'" '/^[[:space:]]*versionName[[:space:]]*=/{print $2; exit}' app/build.gradle)
           short_sha=${GITHUB_SHA::7}
           mkdir -p dist/ci
           cp app/build/outputs/apk/debug/app-debug.apk "dist/ci/AimeSimulator-${version_name}-${short_sha}-debug.apk"

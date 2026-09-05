@@ -1,5 +1,6 @@
 package io.github.umislat.aimesimulator.ui
 
+import android.app.Activity
 import android.content.Context
 import android.graphics.Typeface
 import android.view.View
@@ -7,10 +8,37 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.StringRes
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.color.MaterialColors
 import io.github.umislat.aimesimulator.R
 
 internal fun Context.dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+
+internal fun Activity.setInsetAwareContentView(root: View) {
+    WindowCompat.setDecorFitsSystemWindows(window, false)
+    val initialPadding = intArrayOf(
+        root.paddingLeft,
+        root.paddingTop,
+        root.paddingRight,
+        root.paddingBottom
+    )
+    ViewCompat.setOnApplyWindowInsetsListener(root) { view, windowInsets ->
+        val insets = windowInsets.getInsets(
+            WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+        )
+        view.setPadding(
+            initialPadding[0] + insets.left,
+            initialPadding[1] + insets.top,
+            initialPadding[2] + insets.right,
+            initialPadding[3] + insets.bottom
+        )
+        WindowInsetsCompat.CONSUMED
+    }
+    setContentView(root)
+    ViewCompat.requestApplyInsets(root)
+}
 
 internal fun View.applyMargins(horizontal: Int = 0, vertical: Int = 0) {
     layoutParams = (layoutParams as? ViewGroup.MarginLayoutParams ?: ViewGroup.MarginLayoutParams(
