@@ -100,7 +100,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             getString(R.string.checking_hce_status)
         }
-        setContentView(buildShell())
+        setInsetAwareContentView(buildShell())
         bottomNavigation.menu.findItem(selectedTab).isChecked = true
         showPage(selectedTab, refreshPmm = selectedTab == TAB_STATUS && pmmSnapshot == null)
     }

@@ -22,7 +22,7 @@ import io.github.umislat.aimesimulator.R
 class AboutActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(buildScreen())
+        setInsetAwareContentView(buildScreen())
     }
 
     private fun buildScreen(): LinearLayout {

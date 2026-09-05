@@ -57,7 +57,7 @@ class CardReaderActivity : AppCompatActivity(), NfcAdapter.ReaderCallback {
             })
         }
         root.addView(content, LinearLayout.LayoutParams(-1, 0, 1f))
-        setContentView(root)
+        setInsetAwareContentView(root)
     }
 
     override fun onResume() {
