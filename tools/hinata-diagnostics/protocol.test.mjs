@@ -6,12 +6,19 @@ import {
   PN532_DIRECTION_HOST_TO_CHIP,
   buildFelicaPollPayload,
   buildFelicaReadWithoutEncryption,
+  buildMifareAuthenticate,
+  buildMifarePollPayload,
+  buildMifareReadBlock,
   buildPn532Frame,
   classifyDiagnostic,
   formatHex,
   parseFelicaPollResponse,
   parseFelicaReadResponse,
+  parseMifareClassic1kDump,
+  parseMifareDataExchange,
+  parseMifarePollResponse,
   parsePn532Frame,
+  validateMifareAccessBits,
 } from "./protocol.mjs";
 
 test("builds the HINATA Go compatible FFFF polling frame", () => {
@@ -39,6 +46,70 @@ test("parses a FeliCa target with one returned System Code", () => {
   assert.equal(formatHex(target.idm), "02FE001145141919");
   assert.equal(formatHex(target.pmm), "00F1000000014300");
   assert.deepEqual(target.systemCodes, [0x4000]);
+});
+
+test("builds and parses a 106 kbps NFC-A polling exchange", () => {
+  const frame = buildPn532Frame(
+    PN532_DIRECTION_HOST_TO_CHIP,
+    0x4a,
+    buildMifarePollPayload(),
+  );
+  assert.equal(formatHex(frame), "0000FF04FCD44A0100E100");
+
+  const target = parseMifarePollResponse([
+    0x01, 0x01, 0x00, 0x04, 0x08, 0x04, 0xde, 0xad, 0xbe, 0xef,
+  ]);
+  assert.equal(target.targetNumber, 1);
+  assert.equal(formatHex(target.atqa), "0004");
+  assert.equal(target.sak, 0x08);
+  assert.equal(target.type, "MIFARE Classic 1K");
+  assert.equal(formatHex(target.uid), "DEADBEEF");
+});
+
+test("builds read-only MIFARE authentication and block commands", () => {
+  assert.equal(
+    formatHex(buildMifareAuthenticate(
+      4,
+      [0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
+      [0xde, 0xad, 0xbe, 0xef],
+      "B",
+    )),
+    "6104010203040506DEADBEEF",
+  );
+  assert.equal(formatHex(buildMifareReadBlock(4)), "3004");
+  assert.deepEqual(parseMifareDataExchange([0x00, ...Array(16).fill(0xaa)]), {
+    status: 0,
+    data: Array(16).fill(0xaa),
+  });
+});
+
+test("parses a MIFARE Classic 1K dump without exposing keys through formatting", () => {
+  const dump = Array(1024).fill(0x00);
+  dump.splice(0, 5, 0xde, 0xad, 0xbe, 0xef, 0x22);
+  for (let sector = 0; sector < 16; sector += 1) {
+    dump.splice(
+      sector * 64 + 48,
+      16,
+      ...Array(6).fill(0xff),
+      0xff, 0x07, 0x80, 0x69,
+      ...Array(6).fill(0xff),
+    );
+  }
+  dump.fill(0xaa, 64, 112);
+  dump.splice(112, 16, 1, 2, 3, 4, 5, 6, 0x7f, 0x07, 0x88, 0x69, 7, 8, 9, 10, 11, 12);
+
+  const parsed = parseMifareClassic1kDump(dump);
+  assert.equal(parsed.bccValid, true);
+  assert.equal(formatHex(parsed.uid), "DEADBEEF");
+  assert.equal(formatHex(parsed.sectors[1].keyA), "010203040506");
+  assert.equal(formatHex(parsed.sectors[1].keyB), "0708090A0B0C");
+  assert.equal(parsed.sectors[1].accessValid, true);
+  assert.equal(formatHex(parsed.sectors[1].dataBlocks[0]), "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+});
+
+test("rejects corrupted MIFARE access-bit redundancy", () => {
+  assert.equal(validateMifareAccessBits([0xff, 0x07, 0x80]), true);
+  assert.equal(validateMifareAccessBits([0xff, 0x07, 0x81]), false);
 });
 
 test("builds a little-endian 000B read for blocks 00, 82, and 85", () => {

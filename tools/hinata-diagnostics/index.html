@@ -4,14 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light" />
-    <title>HINATA FeliCa 诊断</title>
-    <link rel="stylesheet" href="./styles.css" />
+    <title>HINATA NFC 诊断</title>
+    <link rel="stylesheet" href="./styles.css?v=20260806-mifare" />
   </head>
   <body>
     <header class="app-header">
       <div>
         <p class="eyebrow">AimeSimulator / Rootless Diagnostics</p>
-        <h1>HINATA FeliCa 诊断</h1>
+        <h1>HINATA NFC 诊断</h1>
       </div>
       <div class="header-actions">
         <button id="export-button" class="button secondary" type="button">导出记录</button>
@@ -65,7 +65,7 @@
         <div class="section-heading">
           <div>
             <p class="eyebrow">212 kbps / Request Code 01</p>
-            <h2 id="results-heading">轮询结果</h2>
+            <h2 id="results-heading">FeliCa 轮询结果</h2>
           </div>
         </div>
 
@@ -120,6 +120,42 @@
         </div>
       </section>
 
+      <section class="mifare-section" aria-labelledby="mifare-heading">
+        <div class="section-heading mifare-heading">
+          <div>
+            <p class="eyebrow">106 kbps / Read-only comparison</p>
+            <h2 id="mifare-heading">MIFARE 模拟卡对照</h2>
+          </div>
+          <div class="mifare-actions">
+            <label class="button secondary file-button" for="mifare-dump">
+              选择 1K dump
+              <input id="mifare-dump" type="file" accept=".dump,application/octet-stream" />
+            </label>
+            <button id="mifare-run-button" class="button primary" type="button">读取当前 NFC-A 卡</button>
+          </div>
+        </div>
+
+        <article class="probe-card mifare-card">
+          <header>
+            <div><span class="probe-code generic">M1 / SECTOR 1</span><h3>外部读取结果</h3></div>
+            <span id="mifare-status" class="probe-status" data-state="idle">未检测</span>
+          </header>
+          <dl>
+            <div><dt>参考 dump</dt><dd data-mifare-field="dump">-</dd></div>
+            <div><dt>参考 UID</dt><dd data-mifare-field="expectedUid">-</dd></div>
+            <div><dt>dump 校验</dt><dd data-mifare-field="dumpIntegrity">-</dd></div>
+            <div><dt>检测 UID</dt><dd data-mifare-field="uid">-</dd></div>
+            <div><dt>ATQA</dt><dd data-mifare-field="atqa">-</dd></div>
+            <div><dt>SAK</dt><dd data-mifare-field="sak">-</dd></div>
+            <div><dt>卡型</dt><dd data-mifare-field="type">-</dd></div>
+            <div><dt>UID 对照</dt><dd data-mifare-field="uidMatch">-</dd></div>
+            <div><dt>Key A</dt><dd data-mifare-field="keyA">-</dd></div>
+            <div><dt>Key B</dt><dd data-mifare-field="keyB">-</dd></div>
+            <div><dt>结论</dt><dd data-mifare-field="detail">-</dd></div>
+          </dl>
+        </article>
+      </section>
+
       <section class="log-section" aria-labelledby="log-heading">
         <div class="section-heading">
           <div>
@@ -132,6 +168,6 @@
       </section>
     </main>
 
-    <script type="module" src="./app.js"></script>
+    <script type="module" src="./app.js?v=20260806-mifare2"></script>
   </body>
 </html>

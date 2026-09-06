@@ -1,8 +1,9 @@
 # HINATA FeliCa diagnostics
 
 This local WebHID tool separates FeliCa discovery, targeted System Code polling,
-and Aime service reads. It does not send write, firmware, or configuration
-commands to the reader.
+and Aime service reads. It also provides a read-only NFC-A/MIFARE comparison for
+an emulated card. It does not send write, firmware, or configuration commands to
+the reader.
 
 ## Run
 
@@ -33,6 +34,18 @@ secure contexts by Chrome; opening `index.html` directly is not supported.
 | `4000` responds, `88B4` does not | Android generic HCE-F works, but this does not match an Aime cabinet poll. |
 | Blocks `00`, `82`, and `85` are read | Polling advanced to service `000B`; block `85` exposes the card-image System Code. |
 | Poll responds but block reads fail | System Code routing works; the HCE service command path does not. |
+
+## MIFARE comparison
+
+Choose a local 1024-byte MIFARE Classic 1K dump, then read the card currently
+held near HINATA. The page compares a masked UID, reports ATQA/SAK and card type,
+and checks Sector 1 with the dump's Key A and Key B. If authentication succeeds,
+it compares data blocks 4-6 without showing their contents.
+
+This is intended to distinguish a wallet that copied only a UID from one that
+actually personalized the protected sector. MIFARE authentication frames,
+keys, and block responses are redacted from the on-screen raw log and exported
+JSON. The tool never writes a block, key, access bit, or configuration value.
 
 The complete run uses PN532 `InListPassiveTarget` at 212 kbps with Request Code
 `01`, then reads blocks `00`, `82`, and `85` from service `000B` for each discovered

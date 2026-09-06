@@ -5,6 +5,9 @@ import {
   PN532_DIRECTION_HOST_TO_CHIP,
   buildFelicaPollPayload,
   buildFelicaReadWithoutEncryption,
+  buildMifareAuthenticate,
+  buildMifarePollPayload,
+  buildMifareReadBlock,
   buildPn532Frame,
   classifyDiagnostic,
   formatHex,
@@ -12,9 +15,12 @@ import {
   normalizeSystemCode,
   parseFelicaPollResponse,
   parseFelicaReadResponse,
+  parseMifareClassic1kDump,
+  parseMifareDataExchange,
+  parseMifarePollResponse,
   parsePn532Frame,
   trimPn532Frame,
-} from "./protocol.mjs";
+} from "./protocol.mjs?v=20260806-mifare2";
 
 const HINATA_VENDOR_ID = 0xf822;
 const HINATA_REPORT_ID = 1;
@@ -35,6 +41,9 @@ const elements = {
   logCount: document.querySelector("#log-count"),
   clearLog: document.querySelector("#clear-log-button"),
   exportLog: document.querySelector("#export-button"),
+  mifareDump: document.querySelector("#mifare-dump"),
+  mifareRun: document.querySelector("#mifare-run-button"),
+  mifareStatus: document.querySelector("#mifare-status"),
 };
 
 let device = null;
@@ -43,6 +52,8 @@ let busy = false;
 let logSequence = 0;
 let logs = [];
 let results = {};
+let mifareDump = null;
+let mifareResult = null;
 
 function setText(element, value) {
   element.textContent = value;
@@ -66,6 +77,8 @@ function setBusy(value) {
   elements.run.disabled = value || !device?.opened;
   elements.customRun.disabled = value || !device?.opened;
   elements.customCode.disabled = value;
+  elements.mifareRun.disabled = value || !device?.opened || !mifareDump;
+  elements.mifareDump.disabled = value;
   elements.connect.textContent = device?.opened ? "断开设备" : "连接 HINATA";
 }
 
@@ -107,7 +120,8 @@ function renderLog() {
     elements.log.scrollTop = elements.log.scrollHeight;
   }
   setText(elements.logCount, String(logs.length));
-  elements.exportLog.disabled = logs.length === 0 && Object.keys(results).length === 0;
+  elements.exportLog.disabled =
+    logs.length === 0 && Object.keys(results).length === 0 && !mifareResult;
   elements.clearLog.disabled = logs.length === 0;
 }
 
@@ -131,7 +145,12 @@ function completeExchange(frame) {
     return;
   }
   if (packet.command !== exchange.expectedCommand) {
-    addLog("INFO", "IGNORED", frame, `expected ${formatHex([exchange.expectedCommand])}`);
+    addLog(
+      "INFO",
+      "IGNORED",
+      exchange.sensitive ? [] : frame,
+      exchange.sensitive ? "[REDACTED]" : `expected ${formatHex([exchange.expectedCommand])}`,
+    );
     return;
   }
 
@@ -149,7 +168,12 @@ function onInputReport(event) {
   try {
     frame = trimPn532Frame(data.slice(1));
   } catch (error) {
-    addLog("RX", "INVALID", data, describeError(error));
+    addLog(
+      "RX",
+      "INVALID",
+      activeExchange?.sensitive ? [] : data,
+      activeExchange?.sensitive ? "[REDACTED]" : describeError(error),
+    );
     cancelExchange(error);
     return;
   }
@@ -158,7 +182,12 @@ function onInputReport(event) {
     addLog("RX", "PN532 ACK", frame);
     return;
   }
-  addLog("RX", "PN532 DATA", frame);
+  addLog(
+    "RX",
+    "PN532 DATA",
+    activeExchange?.sensitive ? [] : frame,
+    activeExchange?.sensitive ? "[REDACTED]" : "",
+  );
   completeExchange(frame);
 }
 
@@ -170,7 +199,7 @@ function cancelExchange(error) {
   exchange.reject(error);
 }
 
-async function exchangePn532(command, payload, label, timeoutMs = 2600) {
+async function exchangePn532(command, payload, label, timeoutMs = 2600, options = {}) {
   if (!device?.opened) throw new Error("HINATA is not connected");
   if (activeExchange) throw new Error("Another PN532 exchange is active");
 
@@ -185,10 +214,16 @@ async function exchangePn532(command, payload, label, timeoutMs = 2600) {
       resolve,
       reject,
       timer,
+      sensitive: options.sensitive === true,
     };
   });
 
-  addLog("TX", label, frame);
+  addLog(
+    "TX",
+    label,
+    options.sensitive ? [] : frame,
+    options.sensitive ? "[REDACTED]" : "",
+  );
   try {
     await device.sendReport(
       HINATA_REPORT_ID,
@@ -268,6 +303,170 @@ async function readAimeBlocks(target) {
   const firstPair = await readAimeBlockGroup(target, [0x00, 0x82]);
   const systemCodeBlock = await readAimeBlockGroup(target, [0x85]);
   return { blockData: [...firstPair, ...systemCodeBlock] };
+}
+
+function bytesEqual(left, right) {
+  const a = Array.from(left ?? []);
+  const b = Array.from(right ?? []);
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
+function maskUid(value) {
+  const hex = formatHex(value);
+  if (hex.length <= 4) return "••••";
+  return `${hex.slice(0, 4)}••${hex.slice(-4)}`;
+}
+
+async function pollMifareTarget() {
+  const response = await exchangePn532(
+    PN532_COMMAND_IN_LIST_PASSIVE_TARGET,
+    buildMifarePollPayload(),
+    "POLL NFC-A",
+    2600,
+    { sensitive: true },
+  );
+  return parseMifarePollResponse(response.payload);
+}
+
+async function exchangeMifare(target, command, label) {
+  const response = await exchangePn532(
+    PN532_COMMAND_IN_DATA_EXCHANGE,
+    [target.targetNumber, ...command],
+    label,
+    2600,
+    { sensitive: true },
+  );
+  return parseMifareDataExchange(response.payload);
+}
+
+async function verifyMifareKey(keyType, key, expectedBlocks) {
+  const target = await pollMifareTarget();
+  if (!target) return { state: "no-target" };
+
+  const authentication = await exchangeMifare(
+    target,
+    buildMifareAuthenticate(4, key, target.uid, keyType),
+    `AUTH SECTOR 1 KEY ${keyType}`,
+  );
+  if (authentication.status !== 0x00) {
+    return { state: "failed", status: formatHex([authentication.status]) };
+  }
+
+  const matches = [];
+  for (let index = 0; index < expectedBlocks.length; index += 1) {
+    const blockNumber = 4 + index;
+    const read = await exchangeMifare(
+      target,
+      buildMifareReadBlock(blockNumber),
+      `READ BLOCK ${blockNumber}`,
+    );
+    if (read.status !== 0x00 || read.data.length < 16) {
+      return {
+        state: "read-failed",
+        status: formatHex([read.status]),
+        blocksMatch: false,
+      };
+    }
+    matches.push(bytesEqual(read.data.slice(0, 16), expectedBlocks[index]));
+  }
+
+  return { state: "authenticated", blocksMatch: matches.every(Boolean), matches };
+}
+
+function mifareField(field, value) {
+  const element = document.querySelector(`[data-mifare-field="${field}"]`);
+  if (element) element.textContent = value;
+}
+
+function describeMifareAuth(result) {
+  return {
+    authenticated: result?.blocksMatch ? "认证成功，数据一致" : "认证成功，数据不同",
+    failed: `认证失败${result?.status ? `（${result.status}）` : ""}`,
+    "read-failed": `认证成功，读取失败${result?.status ? `（${result.status}）` : ""}`,
+    "no-target": "未发现目标",
+    pending: "检测中",
+  }[result?.state] ?? "-";
+}
+
+function renderMifareResult() {
+  const result = mifareResult;
+  const status = elements.mifareStatus;
+  status.dataset.state = result?.state ?? "idle";
+  status.textContent = {
+    pending: "检测中",
+    found: "已读取",
+    empty: "无目标",
+    error: "错误",
+    idle: "未检测",
+  }[result?.state ?? "idle"];
+
+  const sector = mifareDump?.sectors?.[1];
+  mifareField("dump", mifareDump ? "MIFARE Classic 1K · 已加载" : "-");
+  mifareField("expectedUid", mifareDump ? maskUid(mifareDump.uid) : "-");
+  mifareField("dumpIntegrity", mifareDump
+    ? `BCC ${mifareDump.bccValid ? "有效" : "无效"} · 访问位 ${sector?.accessValid ? "有效" : "无效"}`
+    : "-");
+  mifareField("uid", result?.target?.uidMasked ?? "-");
+  mifareField("atqa", result?.target?.atqa ?? "-");
+  mifareField("sak", result?.target?.sak ?? "-");
+  mifareField("type", result?.target?.type ?? "-");
+  mifareField("uidMatch", result?.uidMatches == null ? "-" : result.uidMatches ? "一致" : "不一致");
+  mifareField("keyA", describeMifareAuth(result?.auth?.A));
+  mifareField("keyB", describeMifareAuth(result?.auth?.B));
+  mifareField("detail", result?.detail ?? "-");
+}
+
+async function runMifareDiagnostic() {
+  if (!mifareDump) throw new Error("请先加载 1024 字节的 MIFARE Classic 1K dump");
+  const expectedSector = mifareDump.sectors[1];
+  mifareResult = { state: "pending" };
+  renderMifareResult();
+  setBusy(true);
+
+  try {
+    const target = await pollMifareTarget();
+    if (!target) {
+      mifareResult = { state: "empty", detail: "PN532 返回 0 个 NFC-A 目标" };
+      return;
+    }
+
+    const uidMatches = bytesEqual(target.uid, mifareDump.uid);
+    mifareResult = {
+      state: "found",
+      target: {
+        uidMasked: maskUid(target.uid),
+        atqa: formatHex(target.atqa),
+        sak: formatHex([target.sak]),
+        type: target.type,
+      },
+      uidMatches,
+      auth: { A: { state: "pending" }, B: { state: "pending" } },
+    };
+    renderMifareResult();
+
+    mifareResult.auth.A = await verifyMifareKey("A", expectedSector.keyA, expectedSector.dataBlocks);
+    renderMifareResult();
+    mifareResult.auth.B = await verifyMifareKey("B", expectedSector.keyB, expectedSector.dataBlocks);
+
+    const authenticated = [mifareResult.auth.A, mifareResult.auth.B]
+      .filter((value) => value.state === "authenticated");
+    const blocksMatch = authenticated.some((value) => value.blocksMatch);
+    if (!uidMatches) {
+      mifareResult.detail = "模拟卡 UID 与 dump 不一致";
+    } else if (authenticated.length === 0) {
+      mifareResult.detail = "UID 一致，但模拟卡不接受 dump 中的扇区 1 密钥";
+    } else if (!blocksMatch) {
+      mifareResult.detail = "扇区 1 可以认证，但数据块与 dump 不一致";
+    } else {
+      mifareResult.detail = "UID、扇区 1 认证和数据块均一致";
+    }
+  } catch (error) {
+    mifareResult = { state: "error", detail: describeError(error) };
+  } finally {
+    renderMifareResult();
+    renderLog();
+    setBusy(false);
+  }
 }
 
 function probeElement(code) {
@@ -397,6 +596,7 @@ function exportDiagnostic() {
       : null,
     verdict: classifyDiagnostic(results),
     results,
+    mifare: mifareResult,
     logs,
   };
   const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
@@ -423,6 +623,29 @@ elements.connect.addEventListener("click", async () => {
 });
 
 elements.run.addEventListener("click", runFullDiagnostic);
+elements.mifareDump.addEventListener("change", async () => {
+  mifareDump = null;
+  mifareResult = null;
+  try {
+    const file = elements.mifareDump.files?.[0];
+    if (!file) {
+      renderMifareResult();
+      setBusy(false);
+      return;
+    }
+    mifareDump = parseMifareClassic1kDump(new Uint8Array(await file.arrayBuffer()));
+    const sector = mifareDump.sectors[1];
+    if (!mifareDump.bccValid) throw new Error("dump 的 UID BCC 校验失败");
+    if (!sector.accessValid) throw new Error("dump 的扇区 1 访问位校验失败");
+  } catch (error) {
+    mifareDump = null;
+    mifareResult = { state: "error", detail: describeError(error) };
+  }
+  renderMifareResult();
+  renderLog();
+  setBusy(false);
+});
+elements.mifareRun.addEventListener("click", runMifareDiagnostic);
 elements.customRun.addEventListener("click", async () => {
   setBusy(true);
   try {
@@ -471,6 +694,7 @@ if ("hid" in navigator && window.isSecureContext) {
 }
 
 for (const code of PROBE_CODES) renderProbe(code, null);
+renderMifareResult();
 renderLog();
 renderVerdict();
 setBusy(false);

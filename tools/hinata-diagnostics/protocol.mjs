@@ -110,6 +110,136 @@ export function buildFelicaPollPayload(systemCode) {
   ];
 }
 
+export function buildMifarePollPayload() {
+  return [0x01, 0x00];
+}
+
+export function classifyMifareTarget(sak) {
+  if (!Number.isInteger(sak) || sak < 0 || sak > 0xff) {
+    throw new TypeError("SAK must be a byte");
+  }
+  const normalized = sak & 0xfb;
+  return {
+    0x08: "MIFARE Classic 1K",
+    0x09: "MIFARE Mini",
+    0x18: "MIFARE Classic 4K",
+    0x20: "ISO-DEP / MIFARE Plus",
+  }[normalized] ?? "Unknown NFC-A";
+}
+
+export function parseMifarePollResponse(payload) {
+  const bytes = asBytes(payload, "poll payload");
+  if (bytes.length === 0) throw new Error("Empty InListPassiveTarget response");
+  if (bytes[0] === 0) return null;
+  if (bytes.length < 6) throw new Error("Truncated NFC-A target header");
+
+  const targetNumber = bytes[1];
+  const atqa = bytes.slice(2, 4);
+  const sak = bytes[4];
+  const uidLength = bytes[5];
+  const uidEnd = 6 + uidLength;
+  if (uidLength === 0 || bytes.length < uidEnd) throw new Error("Truncated NFC-A UID");
+
+  let ats = [];
+  if (bytes.length > uidEnd) {
+    const atsLength = bytes[uidEnd];
+    if (bytes.length < uidEnd + 1 + atsLength) throw new Error("Truncated NFC-A ATS");
+    ats = bytes.slice(uidEnd + 1, uidEnd + 1 + atsLength);
+  }
+
+  return {
+    targetNumber,
+    atqa,
+    sak,
+    uid: bytes.slice(6, uidEnd),
+    ats,
+    type: classifyMifareTarget(sak),
+  };
+}
+
+export function buildMifareAuthenticate(block, key, uid, keyType = "B") {
+  if (!Number.isInteger(block) || block < 0 || block > 0xff) {
+    throw new TypeError("MIFARE block must be a byte");
+  }
+  const keyBytes = asBytes(key, "MIFARE key");
+  const uidBytes = asBytes(uid, "MIFARE UID");
+  if (keyBytes.length !== 6) throw new TypeError("MIFARE key must contain six bytes");
+  if (uidBytes.length < 4) throw new TypeError("MIFARE UID must contain at least four bytes");
+
+  const normalizedKeyType = String(keyType).toUpperCase();
+  if (normalizedKeyType !== "A" && normalizedKeyType !== "B") {
+    throw new TypeError("MIFARE key type must be A or B");
+  }
+  return [
+    normalizedKeyType === "A" ? 0x60 : 0x61,
+    block,
+    ...keyBytes,
+    ...uidBytes.slice(-4),
+  ];
+}
+
+export function buildMifareReadBlock(block) {
+  if (!Number.isInteger(block) || block < 0 || block > 0xff) {
+    throw new TypeError("MIFARE block must be a byte");
+  }
+  return [0x30, block];
+}
+
+export function parseMifareDataExchange(payload) {
+  const bytes = asBytes(payload, "data exchange payload");
+  if (bytes.length === 0) throw new Error("Empty InDataExchange response");
+  return { status: bytes[0], data: bytes.slice(1) };
+}
+
+export function validateMifareAccessBits(value) {
+  const access = asBytes(value, "MIFARE access bits");
+  if (access.length < 3) throw new TypeError("MIFARE access bits need three bytes");
+
+  for (let block = 0; block < 4; block += 1) {
+    const c1 = (access[1] >> (4 + block)) & 1;
+    const c2 = (access[2] >> block) & 1;
+    const c3 = (access[2] >> (4 + block)) & 1;
+    const notC1 = (access[0] >> block) & 1;
+    const notC2 = (access[0] >> (4 + block)) & 1;
+    const notC3 = (access[1] >> block) & 1;
+    if (c1 === notC1 || c2 === notC2 || c3 === notC3) return false;
+  }
+  return true;
+}
+
+export function parseMifareClassic1kDump(value) {
+  const bytes = asBytes(value, "MIFARE dump");
+  if (bytes.length !== 1024) throw new TypeError("MIFARE Classic 1K dump must be 1024 bytes");
+
+  const uid = bytes.slice(0, 4);
+  const calculatedBcc = uid.reduce((result, byte) => result ^ byte, 0);
+  const sectors = [];
+  for (let sector = 0; sector < 16; sector += 1) {
+    const offset = sector * 64;
+    const trailer = bytes.slice(offset + 48, offset + 64);
+    sectors.push({
+      index: sector,
+      dataBlocks: [
+        bytes.slice(offset, offset + 16),
+        bytes.slice(offset + 16, offset + 32),
+        bytes.slice(offset + 32, offset + 48),
+      ],
+      keyA: trailer.slice(0, 6),
+      access: trailer.slice(6, 10),
+      keyB: trailer.slice(10, 16),
+      accessValid: validateMifareAccessBits(trailer.slice(6, 9)),
+    });
+  }
+
+  return {
+    uid,
+    storedBcc: bytes[4],
+    calculatedBcc,
+    bccValid: bytes[4] === calculatedBcc,
+    sectors,
+  };
+}
+
 export function parseFelicaPollResponse(payload) {
   const bytes = asBytes(payload, "poll payload");
   if (bytes.length === 0) throw new Error("Empty InListPassiveTarget response");
