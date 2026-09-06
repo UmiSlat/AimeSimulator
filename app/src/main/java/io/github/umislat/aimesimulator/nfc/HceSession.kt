@@ -38,47 +38,69 @@ internal class HceSession(private val context: Context) {
         profile: CardProfile,
         routeMode: IdmRouteMode,
         systemCode: String = SYSTEM_CODE
+    ): Report = activateProfile(
+        activity,
+        profile.profileId,
+        profile.routedIdm(routeMode),
+        systemCode
+    )
+
+    private fun activateProfile(
+        activity: Activity,
+        profileId: String,
+        nfcid2: String,
+        systemCode: String
     ): Report {
-        if (!context.packageManager.hasSystemFeature(PackageManager.FEATURE_NFC_HOST_CARD_EMULATION_NFCF)) {
-            return report(Stage.UNSUPPORTED)
-        }
-        val nfcAdapter = resolveAdapter()
-            ?: return report(Stage.SERVICE_RESTARTING)
-        try {
-            if (!nfcAdapter.isEnabled) return report(Stage.NFC_DISABLED)
-        } catch (error: RuntimeException) {
-            return runtimeFailure(error)
+        val store by lazy(LazyThreadSafetyMode.NONE) { CardStore(context) }
+        val workflow = HceActivationWorkflow(
+            backend = androidBackend(activity, component),
+            selection = object : HceActivationWorkflow.Selection {
+                override fun selectedProfileId(): String? = store.selectedProfile()?.profileId
+
+                override fun select(profileId: String?): Boolean = store.select(profileId)
+            },
+            failureReporter = ::runtimeFailure
+        )
+        return workflow.activate(profileId, nfcid2, systemCode)
+    }
+
+    private fun androidBackend(
+        activity: Activity,
+        serviceComponent: ComponentName
+    ): HceActivationWorkflow.Backend = object : HceActivationWorkflow.Backend {
+        private var activeAdapter: NfcAdapter? = null
+        private var cachedManager: NfcFCardEmulation? = null
+
+        override fun isSupported(): Boolean = context.packageManager.hasSystemFeature(
+            PackageManager.FEATURE_NFC_HOST_CARD_EMULATION_NFCF
+        )
+
+        override fun availability(): HceActivationWorkflow.Availability {
+            val nfcAdapter = resolveAdapter()
+                ?: return HceActivationWorkflow.Availability.SERVICE_RESTARTING
+            activeAdapter = nfcAdapter
+            return if (nfcAdapter.isEnabled) {
+                HceActivationWorkflow.Availability.READY
+            } else {
+                HceActivationWorkflow.Availability.NFC_DISABLED
+            }
         }
 
-        val store = CardStore(context)
-        val previousId = store.selectedProfile()?.profileId
-        val selectionChanged = previousId != profile.profileId
-        if (selectionChanged && !store.select(profile.profileId)) {
-            return report(Stage.STORAGE)
+        override fun disable() {
+            manager().disableService(activity)
         }
 
-        return try {
-            val manager = NfcFCardEmulation.getInstance(nfcAdapter)
-            manager.disableService(activity)
-            if (!manager.setNfcid2ForService(component, profile.routedIdm(routeMode))) {
-                restore(store, previousId, selectionChanged)
-                return report(Stage.ID)
-            }
-            if (!manager.registerSystemCodeForService(component, systemCode)) {
-                manager.disableService(activity)
-                restore(store, previousId, selectionChanged)
-                return report(Stage.SYSTEM_CODE)
-            }
-            if (!manager.enableService(activity, component)) {
-                manager.disableService(activity)
-                restore(store, previousId, selectionChanged)
-                return report(Stage.ENABLE)
-            }
-            report(Stage.READY)
-        } catch (error: RuntimeException) {
-            restore(store, previousId, selectionChanged)
-            runtimeFailure(error)
-        }
+        override fun setNfcid2(nfcid2: String): Boolean =
+            manager().setNfcid2ForService(serviceComponent, nfcid2)
+
+        override fun registerSystemCode(systemCode: String): Boolean =
+            manager().registerSystemCodeForService(serviceComponent, systemCode)
+
+        override fun enable(): Boolean = manager().enableService(activity, serviceComponent)
+
+        private fun manager(): NfcFCardEmulation = cachedManager ?: NfcFCardEmulation.getInstance(
+            checkNotNull(activeAdapter) { "NFC adapter was not prepared" }
+        ).also { cachedManager = it }
     }
 
     fun deactivate(activity: Activity) {
@@ -161,10 +183,6 @@ internal class HceSession(private val context: Context) {
         return runCatching { NfcAdapter.getDefaultAdapter(context) }.getOrNull()?.also {
             adapter = it
         }
-    }
-
-    private fun restore(store: CardStore, profileId: String?, selectionChanged: Boolean) {
-        if (selectionChanged) store.select(profileId)
     }
 
     private fun report(stage: Stage, detail: String = ""): Report = Report(stage, detail)
