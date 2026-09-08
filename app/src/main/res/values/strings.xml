@@ -87,6 +87,9 @@
     <string name="hce_unsupported">This device does not support NFC-F host card emulation.</string>
     <string name="hce_waiting_for_service">Waiting for the NFC service to restart…</string>
     <string name="hce_service_restart_timeout">The NFC service did not recover. Toggle NFC or restart the device.</string>
+    <string name="hce_waiting_for_link_release">Waiting for the current NFC-F link to close…</string>
+    <string name="hce_link_release_timeout">The failure may be caused by an NFC-F link that has not closed. Move the phone away from the reader, then tap Re-register.</string>
+    <string name="hce_retry_registration">Re-register</string>
     <string name="hce_storage_failed">The selected card profile could not be saved.</string>
     <string name="hce_nfcid2_rejected">Android rejected the current NFCID2.</string>
     <string name="hce_system_code_rejected">Android rejected the System Code 88B4 required by AIME.</string>

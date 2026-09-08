@@ -86,6 +86,9 @@
     <string name="hce_unsupported">此设备不支持 NFC-F 主机卡模拟。</string>
     <string name="hce_waiting_for_service">正在等待 NFC 服务重启…</string>
     <string name="hce_service_restart_timeout">NFC 服务未能恢复，请切换 NFC 或重启设备。</string>
+    <string name="hce_waiting_for_link_release">正在等待当前 NFC-F 链路释放…</string>
+    <string name="hce_link_release_timeout">当前失败可能由尚未结束的 NFC-F 链路造成。请将手机移开读卡器，再点击“重新注册”。</string>
+    <string name="hce_retry_registration">重新注册</string>
     <string name="hce_storage_failed">无法保存当前选中的卡片配置。</string>
     <string name="hce_nfcid2_rejected">系统拒绝了当前 NFCID2。</string>
     <string name="hce_system_code_rejected">系统拒绝了 AIME 所需的 System Code 88B4。</string>
