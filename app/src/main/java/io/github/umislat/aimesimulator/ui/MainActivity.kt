@@ -1,8 +1,12 @@
 package io.github.umislat.aimesimulator.ui
 
 import android.app.Activity
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Typeface
+import android.nfc.NfcAdapter
 import android.os.Bundle
 import android.text.InputType
 import android.view.Gravity
@@ -17,6 +21,7 @@ import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.content.ContextCompat
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -43,6 +48,7 @@ import io.github.umislat.aimesimulator.data.IdmRouteMode
 import io.github.umislat.aimesimulator.nfc.DefaultNfcAppChecker
 import io.github.umislat.aimesimulator.nfc.HceActivationRetryPolicy
 import io.github.umislat.aimesimulator.nfc.HceSession
+import io.github.umislat.aimesimulator.nfc.NfcAdapterStatePolicy
 import io.github.umislat.aimesimulator.nfc.RootlessAssessment
 import io.github.umislat.aimesimulator.root.PmmManager
 
@@ -56,6 +62,7 @@ class MainActivity : AppCompatActivity() {
     private var selectedTab = TAB_CARDS
     private var foreground = false
     private var hasResumed = false
+    private var nfcStateReceiverRegistered = false
     private var activationRetry: Runnable? = null
     private var hceStatusText: CharSequence = ""
     private var cardPageStatusView: TextView? = null
@@ -68,6 +75,20 @@ class MainActivity : AppCompatActivity() {
     private var rootlessDetailView: TextView? = null
     private var defaultHcefStatusView: TextView? = null
     private var staticDiagnosticStatusView: TextView? = null
+
+    private val nfcStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != NfcAdapter.ACTION_ADAPTER_STATE_CHANGED) return
+            val reportedState = intent.getIntExtra(
+                NfcAdapter.EXTRA_ADAPTER_STATE,
+                NfcAdapter.STATE_OFF
+            )
+            val adapterEnabled = runCatching {
+                NfcAdapter.getDefaultAdapter(context ?: this@MainActivity)?.isEnabled
+            }.getOrNull()
+            handleNfcAdapterStateChanged(reportedState, adapterEnabled)
+        }
+    }
     private var defaultNfcStatus = DefaultNfcAppChecker.Result.NFC_NOT_READY
     private var defaultNfcStatusView: TextView? = null
     private var defaultNfcAction: MaterialButton? = null
@@ -110,6 +131,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         foreground = true
+        registerNfcStateReceiver()
         activateSelected()
         if (hasResumed && selectedTab == TAB_STATUS) refreshPmm()
         hasResumed = true
@@ -118,9 +140,52 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         foreground = false
+        unregisterNfcStateReceiver()
         cancelActivationRetry()
         session.deactivate(this)
         super.onPause()
+    }
+
+    private fun registerNfcStateReceiver() {
+        if (nfcStateReceiverRegistered) return
+        // The NFC broadcast can originate from a privileged process with a non-system UID.
+        ContextCompat.registerReceiver(
+            this,
+            nfcStateReceiver,
+            IntentFilter(NfcAdapter.ACTION_ADAPTER_STATE_CHANGED),
+            ContextCompat.RECEIVER_EXPORTED
+        )
+        nfcStateReceiverRegistered = true
+    }
+
+    private fun unregisterNfcStateReceiver() {
+        if (!nfcStateReceiverRegistered) return
+        unregisterReceiver(nfcStateReceiver)
+        nfcStateReceiverRegistered = false
+    }
+
+    private fun handleNfcAdapterStateChanged(adapterState: Int, adapterEnabled: Boolean?) {
+        if (!foreground) return
+        when (NfcAdapterStatePolicy.actionFor(adapterState, adapterEnabled)) {
+            NfcAdapterStatePolicy.Action.MARK_DISABLED -> {
+                cancelActivationRetry()
+                defaultHcefReport = null
+                staticDiagnosticReport = null
+                lastHceReport = HceSession.Report(HceSession.Stage.NFC_DISABLED)
+                setHceStatus(getString(R.string.nfc_disabled))
+            }
+            NfcAdapterStatePolicy.Action.MARK_ENABLING -> {
+                cancelActivationRetry()
+                defaultHcefReport = null
+                staticDiagnosticReport = null
+                lastHceReport = HceSession.Report(HceSession.Stage.SERVICE_RESTARTING)
+                setHceStatus(getString(R.string.hce_waiting_for_service))
+            }
+            NfcAdapterStatePolicy.Action.ACTIVATE -> activateSelected()
+            NfcAdapterStatePolicy.Action.IGNORE -> return
+        }
+        renderRootlessAssessment()
+        refreshDefaultNfcAppStatus()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
