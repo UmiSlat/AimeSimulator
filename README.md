@@ -31,7 +31,7 @@ AimeSimulator 是一个面向 Android 的 NFC-F / FeliCa Lite 卡片配置管理
 - 使用单一“读取卡片”入口自动识别 Amusement IC、普通 FeliCa 和旧式 MIFARE Aime。
 - Amusement IC 可读取 IDm、加密 S_PAD0、ID 块并解密得到 Access Code。
 - 普通 FeliCa 可尝试读取 IDm、S_PAD0 与 ID 块；旧式 MIFARE Aime 的 UID 与 Access Code 读取已实现，但尚待旧式 Aime 实卡验证。
-- 提供正常模式与兼容模式两种 NFCID2 路由方式。
+- 提供正常、固定兼容和 `02FE` 前缀兼容三种 NFCID2 路由方式。
 - 进入应用时检查系统默认 NFC 支付应用；如果尚未选择本应用，则打开 Android 的系统确认界面。
 - 响应 FeliCa Lite 的 Read Without Encryption 请求。
 - 通过标准 HCE-F `t3tPmm-filter` 声明 PMm `00F1000000014300`，兼容的系统无需 Hook。
@@ -176,6 +176,7 @@ MIFARE Classic 能否读取还取决于手机 NFC 控制器和 Android 驱动。
 4. 保持应用位于前台，将手机 NFC 天线靠近读卡器。
 
 应用离开前台时会停用前台 HCE-F 服务；重新返回应用后会自动注册当前选择的配置。
+如果在手机仍贴着读卡器时切换配置或路由模式，Android 可能暂时拒绝更新 NFCID2 或 System Code。应用会先按未释放链路处理并自动重试约 10 秒；若厂商 NFC 栈在移开后仍锁定旧值，状态页会显示“重新注册”按钮，通过一次完整的 Activity 暂停/恢复重新建立前台 HCE-F 服务。
 
 ### 默认 NFC 应用检查
 
@@ -185,14 +186,15 @@ MIFARE Classic 能否读取还取决于手机 NFC 控制器和 Android 驱动。
 
 选择本应用会替换设备原有的默认 NFC 支付应用，可能影响手机钱包的碰一碰支付。需要恢复时，请在 Android 的“默认应用”“非接触式付款”或钱包设置中重新选择原应用。一次应用会话中只请求一次，取消系统确认不会循环弹窗。
 
-### 正常模式与兼容模式
+### NFCID2 路由模式
 
 | 模式 | 向 Android 注册的 NFCID2 | 模拟数据中的卡片 IDm | 适用场景 |
 | --- | --- | --- | --- |
 | 正常模式 | 当前配置的 IDm | 当前配置的 IDm | 系统和读卡端均接受动态 IDm |
 | 兼容模式 | 固定为 `02FE001145141919` | 仍使用当前配置的 IDm | 系统或读卡端不接受动态卡号 |
+| `02FE` 前缀兼容模式 | `02FE` + 当前配置 IDm 的后 12 位 | 仍使用当前配置的 IDm | 需要 `02FE` 前缀，同时希望保留原 IDm 后 12 位 |
 
-兼容模式不会修改已经保存的配置，也不会改变 PMm 开关。它只改变交给 Android NFC 路由层的 NFCID2。
+两种兼容模式都不会修改已经保存的配置，也不会改变 PMm 开关。它们只改变交给 Android NFC 路由层的 NFCID2。
 
 ### 外观设置
 

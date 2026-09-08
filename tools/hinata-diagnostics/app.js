@@ -1,6 +1,7 @@
 import {
   PN532_COMMAND_IN_DATA_EXCHANGE,
   PN532_COMMAND_IN_LIST_PASSIVE_TARGET,
+  PN532_COMMAND_IN_RELEASE,
   PN532_DIRECTION_CHIP_TO_HOST,
   PN532_DIRECTION_HOST_TO_CHIP,
   buildFelicaPollPayload,
@@ -20,7 +21,7 @@ import {
   parseMifarePollResponse,
   parsePn532Frame,
   trimPn532Frame,
-} from "./protocol.mjs?v=20260806-mifare2";
+} from "./protocol.mjs?v=20260907-release1";
 
 const HINATA_VENDOR_ID = 0xf822;
 const HINATA_REPORT_ID = 1;
@@ -257,6 +258,7 @@ async function connectDevice() {
 }
 
 async function disconnectDevice() {
+  if (device?.opened && !activeExchange) await releaseTargetsBestEffort();
   cancelExchange(new Error("Device disconnected"));
   if (device) {
     device.removeEventListener("inputreport", onInputReport);
@@ -266,6 +268,32 @@ async function disconnectDevice() {
   setText(elements.connection, "未连接");
   elements.connection.dataset.state = "disconnected";
   setText(elements.device, "未选择设备");
+}
+
+async function releaseTargets() {
+  const response = await exchangePn532(
+    PN532_COMMAND_IN_RELEASE,
+    [0x00],
+    "RELEASE ALL",
+    1200,
+  );
+  const status = response.payload[0];
+  if (!Number.isInteger(status)) throw new Error("InRelease returned no status");
+  if (status !== 0x00) {
+    throw new Error(`InRelease failed with status ${formatHex([status])}`);
+  }
+}
+
+async function releaseTargetsBestEffort() {
+  if (!device?.opened || activeExchange) return { state: "skipped" };
+  try {
+    await releaseTargets();
+    return { state: "released" };
+  } catch (error) {
+    const detail = describeError(error);
+    addLog("INFO", "RELEASE FAILED", [], detail);
+    return { state: "error", detail };
+  }
 }
 
 async function pollSystemCode(systemCode) {
@@ -340,37 +368,41 @@ async function exchangeMifare(target, command, label) {
 }
 
 async function verifyMifareKey(keyType, key, expectedBlocks) {
-  const target = await pollMifareTarget();
-  if (!target) return { state: "no-target" };
+  try {
+    const target = await pollMifareTarget();
+    if (!target) return { state: "no-target" };
 
-  const authentication = await exchangeMifare(
-    target,
-    buildMifareAuthenticate(4, key, target.uid, keyType),
-    `AUTH SECTOR 1 KEY ${keyType}`,
-  );
-  if (authentication.status !== 0x00) {
-    return { state: "failed", status: formatHex([authentication.status]) };
-  }
-
-  const matches = [];
-  for (let index = 0; index < expectedBlocks.length; index += 1) {
-    const blockNumber = 4 + index;
-    const read = await exchangeMifare(
+    const authentication = await exchangeMifare(
       target,
-      buildMifareReadBlock(blockNumber),
-      `READ BLOCK ${blockNumber}`,
+      buildMifareAuthenticate(4, key, target.uid, keyType),
+      `AUTH SECTOR 1 KEY ${keyType}`,
     );
-    if (read.status !== 0x00 || read.data.length < 16) {
-      return {
-        state: "read-failed",
-        status: formatHex([read.status]),
-        blocksMatch: false,
-      };
+    if (authentication.status !== 0x00) {
+      return { state: "failed", status: formatHex([authentication.status]) };
     }
-    matches.push(bytesEqual(read.data.slice(0, 16), expectedBlocks[index]));
-  }
 
-  return { state: "authenticated", blocksMatch: matches.every(Boolean), matches };
+    const matches = [];
+    for (let index = 0; index < expectedBlocks.length; index += 1) {
+      const blockNumber = 4 + index;
+      const read = await exchangeMifare(
+        target,
+        buildMifareReadBlock(blockNumber),
+        `READ BLOCK ${blockNumber}`,
+      );
+      if (read.status !== 0x00 || read.data.length < 16) {
+        return {
+          state: "read-failed",
+          status: formatHex([read.status]),
+          blocksMatch: false,
+        };
+      }
+      matches.push(bytesEqual(read.data.slice(0, 16), expectedBlocks[index]));
+    }
+
+    return { state: "authenticated", blocksMatch: matches.every(Boolean), matches };
+  } finally {
+    await releaseTargetsBestEffort();
+  }
 }
 
 function mifareField(field, value) {
@@ -424,7 +456,12 @@ async function runMifareDiagnostic() {
   setBusy(true);
 
   try {
-    const target = await pollMifareTarget();
+    let target;
+    try {
+      target = await pollMifareTarget();
+    } finally {
+      await releaseTargetsBestEffort();
+    }
     if (!target) {
       mifareResult = { state: "empty", detail: "PN532 返回 0 个 NFC-A 目标" };
       return;
@@ -559,6 +596,8 @@ async function runProbe(systemCode, { cardCode = systemCode, readBlocks = true }
     }
   } catch (error) {
     result = { state: "error", requestedSystemCode: code, detail: describeError(error) };
+  } finally {
+    result.release = await releaseTargetsBestEffort();
   }
 
   if (PROBE_CODES.includes(cardCode)) {

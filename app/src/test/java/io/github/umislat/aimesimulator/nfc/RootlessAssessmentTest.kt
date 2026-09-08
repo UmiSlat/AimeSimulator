@@ -54,6 +54,16 @@ class RootlessAssessmentTest {
         assertEquals(RootlessAssessment.Outcome.SYSTEM_CODE_REJECTED, assessment.outcome)
     }
 
+    @Test fun reportsAnActiveReaderLinkWithoutCallingItAnIdentifierRejection() {
+        val assessment = RootlessAssessment.from(
+            HceSession.Report(HceSession.Stage.LINK_ACTIVE),
+            routeMode = IdmRouteMode.FIXED_COMPATIBILITY,
+            hasProfile = true
+        )
+
+        assertEquals(RootlessAssessment.Outcome.LINK_ACTIVE, assessment.outcome)
+    }
+
     @Test fun reportsProfileStorageFailure() {
         val assessment = RootlessAssessment.from(
             HceSession.Report(HceSession.Stage.STORAGE),

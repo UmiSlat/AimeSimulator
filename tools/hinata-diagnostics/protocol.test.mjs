@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  PN532_COMMAND_IN_RELEASE,
   PN532_DIRECTION_CHIP_TO_HOST,
   PN532_DIRECTION_HOST_TO_CHIP,
   buildFelicaPollPayload,
@@ -20,6 +21,15 @@ import {
   parsePn532Frame,
   validateMifareAccessBits,
 } from "./protocol.mjs";
+
+test("builds the PN532 command that releases every active target", () => {
+  const frame = buildPn532Frame(
+    PN532_DIRECTION_HOST_TO_CHIP,
+    PN532_COMMAND_IN_RELEASE,
+    [0x00],
+  );
+  assert.equal(formatHex(frame), "0000FF03FDD45200DA00");
+});
 
 test("builds the HINATA Go compatible FFFF polling frame", () => {
   const frame = buildPn532Frame(

@@ -4,6 +4,7 @@ export const PN532_DIRECTION_HOST_TO_CHIP = 0xd4;
 export const PN532_DIRECTION_CHIP_TO_HOST = 0xd5;
 export const PN532_COMMAND_IN_LIST_PASSIVE_TARGET = 0x4a;
 export const PN532_COMMAND_IN_DATA_EXCHANGE = 0x40;
+export const PN532_COMMAND_IN_RELEASE = 0x52;
 export const PN532_ACK = Object.freeze([0x00, 0x00, 0xff, 0x00, 0xff, 0x00]);
 
 function asBytes(value, name = "bytes") {

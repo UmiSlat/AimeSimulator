@@ -14,8 +14,8 @@ import io.github.umislat.aimesimulator.data.IdmRouteMode
 
 internal class HceSession(private val context: Context) {
     enum class Stage {
-        READY, UNSUPPORTED, NFC_DISABLED, SERVICE_RESTARTING, STORAGE, ID, SYSTEM_CODE, ENABLE,
-        EXCEPTION
+        READY, UNSUPPORTED, NFC_DISABLED, SERVICE_RESTARTING, LINK_ACTIVE, STORAGE, ID,
+        SYSTEM_CODE, ENABLE, EXCEPTION
     }
 
     data class Report(val stage: Stage, val detail: String = "") {

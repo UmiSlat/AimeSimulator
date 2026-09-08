@@ -41,6 +41,7 @@ import io.github.umislat.aimesimulator.data.CardProfile
 import io.github.umislat.aimesimulator.data.CardStore
 import io.github.umislat.aimesimulator.data.IdmRouteMode
 import io.github.umislat.aimesimulator.nfc.DefaultNfcAppChecker
+import io.github.umislat.aimesimulator.nfc.HceActivationRetryPolicy
 import io.github.umislat.aimesimulator.nfc.HceSession
 import io.github.umislat.aimesimulator.nfc.RootlessAssessment
 import io.github.umislat.aimesimulator.root.PmmManager
@@ -59,6 +60,7 @@ class MainActivity : AppCompatActivity() {
     private var hceStatusText: CharSequence = ""
     private var cardPageStatusView: TextView? = null
     private var statusPageStatusView: TextView? = null
+    private var hceRetryAction: MaterialButton? = null
     private var lastHceReport: HceSession.Report? = null
     private var defaultHcefReport: HceSession.Report? = null
     private var staticDiagnosticReport: HceSession.Report? = null
@@ -162,6 +164,7 @@ class MainActivity : AppCompatActivity() {
         selectedTab = tab
         cardPageStatusView = null
         statusPageStatusView = null
+        hceRetryAction = null
         rootlessStatusView = null
         rootlessDetailView = null
         defaultHcefStatusView = null
@@ -367,6 +370,19 @@ class MainActivity : AppCompatActivity() {
                     textSize = 13f
                     alpha = 0.7f
                     setPadding(0, dp(6), 0, 0)
+                })
+                val retryAction = MaterialButton(
+                    this@MainActivity,
+                    null,
+                    com.google.android.material.R.attr.materialButtonOutlinedStyle
+                ).apply {
+                    setText(R.string.hce_retry_registration)
+                    visibility = hceRetryActionVisibility()
+                    setOnClickListener { recreate() }
+                }
+                hceRetryAction = retryAction
+                addView(retryAction, LinearLayout.LayoutParams(-1, -2).apply {
+                    topMargin = dp(10)
                 })
             })
         })
@@ -796,7 +812,10 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    private fun activateSelected(attempt: Int = 0) {
+    private fun activateSelected(
+        attempt: Int = 0,
+        retryKind: ActivationRetryKind? = null
+    ) {
         cancelActivationRetry()
         defaultHcefReport = null
         staticDiagnosticReport = null
@@ -807,18 +826,46 @@ class MainActivity : AppCompatActivity() {
             renderRootlessAssessment()
             return
         }
+        val previousReport = lastHceReport
         val report = session.activate(this, selected, store.idmRouteMode())
-        lastHceReport = report
-        val message = when (report.stage) {
+        val likelyActiveLink = HceActivationRetryPolicy.isLikelyActiveLink(
+            report,
+            previousReport,
+            retryKind == ActivationRetryKind.LINK_RELEASE
+        )
+        lastHceReport = if (likelyActiveLink) {
+            HceSession.Report(HceSession.Stage.LINK_ACTIVE, report.stage.name)
+        } else {
+            report
+        }
+        val message = if (likelyActiveLink) {
+            val linkAttempt = if (retryKind == ActivationRetryKind.LINK_RELEASE) attempt else 0
+            if (linkAttempt < MAX_LINK_RELEASE_RETRIES) {
+                scheduleActivationRetry(
+                    linkAttempt + 1,
+                    ActivationRetryKind.LINK_RELEASE
+                )
+                getString(R.string.hce_waiting_for_link_release)
+            } else {
+                getString(R.string.hce_link_release_timeout)
+            }
+        } else when (report.stage) {
             HceSession.Stage.READY -> getString(R.string.hce_ready, selected.label)
             HceSession.Stage.UNSUPPORTED -> getString(R.string.hce_unsupported)
             HceSession.Stage.NFC_DISABLED -> getString(R.string.nfc_disabled)
             HceSession.Stage.SERVICE_RESTARTING -> {
-                if (attempt < MAX_ACTIVATION_RETRIES) {
-                    scheduleActivationRetry(attempt + 1)
+                val serviceAttempt = if (
+                    retryKind == ActivationRetryKind.SERVICE_RESTART
+                ) attempt else 0
+                if (serviceAttempt < MAX_SERVICE_RESTART_RETRIES) {
+                    scheduleActivationRetry(
+                        serviceAttempt + 1,
+                        ActivationRetryKind.SERVICE_RESTART
+                    )
                     getString(R.string.hce_waiting_for_service)
                 } else getString(R.string.hce_service_restart_timeout)
             }
+            HceSession.Stage.LINK_ACTIVE -> getString(R.string.hce_waiting_for_link_release)
             HceSession.Stage.STORAGE -> getString(R.string.hce_storage_failed)
             HceSession.Stage.ID -> getString(R.string.hce_nfcid2_rejected)
             HceSession.Stage.SYSTEM_CODE -> getString(R.string.hce_system_code_rejected)
@@ -870,7 +917,12 @@ class MainActivity : AppCompatActivity() {
     private fun updateHceStatusViews() {
         cardPageStatusView?.text = hceStatusText
         statusPageStatusView?.text = hceStatusText
+        hceRetryAction?.visibility = hceRetryActionVisibility()
     }
+
+    private fun hceRetryActionVisibility(): Int = if (
+        lastHceReport?.stage == HceSession.Stage.LINK_ACTIVE && activationRetry == null
+    ) View.VISIBLE else View.GONE
 
     private fun renderRootlessAssessment() {
         val assessment = RootlessAssessment.from(
@@ -895,6 +947,8 @@ class MainActivity : AppCompatActivity() {
                 R.string.rootless_nfc_disabled_title to R.string.rootless_nfc_disabled_detail
             RootlessAssessment.Outcome.SERVICE_RESTARTING ->
                 R.string.rootless_checking_title to R.string.rootless_checking_detail
+            RootlessAssessment.Outcome.LINK_ACTIVE ->
+                R.string.rootless_link_active_title to R.string.rootless_link_active_detail
             RootlessAssessment.Outcome.STORAGE_FAILED ->
                 R.string.rootless_storage_title to R.string.rootless_storage_detail
             RootlessAssessment.Outcome.DYNAMIC_ID_REJECTED ->
@@ -945,6 +999,7 @@ class MainActivity : AppCompatActivity() {
         HceSession.Stage.UNSUPPORTED -> getString(R.string.rootless_unsupported_detail)
         HceSession.Stage.NFC_DISABLED -> getString(R.string.rootless_nfc_disabled_detail)
         HceSession.Stage.SERVICE_RESTARTING -> getString(R.string.rootless_checking_detail)
+        HceSession.Stage.LINK_ACTIVE -> getString(R.string.rootless_link_active_detail)
         HceSession.Stage.STORAGE -> getString(R.string.hce_storage_failed)
         HceSession.Stage.ID -> getString(R.string.generic_hcef_id_rejected)
         HceSession.Stage.SYSTEM_CODE -> getString(R.string.generic_hcef_system_code_rejected)
@@ -973,6 +1028,7 @@ class MainActivity : AppCompatActivity() {
         HceSession.Stage.UNSUPPORTED -> getString(R.string.rootless_unsupported_detail)
         HceSession.Stage.NFC_DISABLED -> getString(R.string.rootless_nfc_disabled_detail)
         HceSession.Stage.SERVICE_RESTARTING -> getString(R.string.rootless_checking_detail)
+        HceSession.Stage.LINK_ACTIVE -> getString(R.string.rootless_link_active_detail)
         HceSession.Stage.STORAGE -> getString(R.string.hce_storage_failed)
         HceSession.Stage.ID -> getString(
             R.string.static_hcef_id_removed,
@@ -989,11 +1045,17 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private fun scheduleActivationRetry(attempt: Int) {
+    private fun scheduleActivationRetry(attempt: Int, kind: ActivationRetryKind) {
         activationRetry = Runnable {
             activationRetry = null
-            if (foreground) activateSelected(attempt)
-        }.also { contentHost.postDelayed(it, ACTIVATION_RETRY_DELAY_MS) }
+            if (foreground) activateSelected(attempt, kind)
+        }.also {
+            val delay = when (kind) {
+                ActivationRetryKind.SERVICE_RESTART -> SERVICE_RESTART_RETRY_DELAY_MS
+                ActivationRetryKind.LINK_RELEASE -> LINK_RELEASE_RETRY_DELAY_MS
+            }
+            contentHost.postDelayed(it, delay)
+        }
     }
 
     private fun cancelActivationRetry() {
@@ -1272,12 +1334,19 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
+    private enum class ActivationRetryKind {
+        SERVICE_RESTART,
+        LINK_RELEASE
+    }
+
     private companion object {
         const val TAB_CARDS = 1001
         const val TAB_STATUS = 1002
         const val TAB_SETTINGS = 1003
-        const val MAX_ACTIVATION_RETRIES = 30
-        const val ACTIVATION_RETRY_DELAY_MS = 1_000L
+        const val MAX_SERVICE_RESTART_RETRIES = 30
+        const val SERVICE_RESTART_RETRY_DELAY_MS = 1_000L
+        const val MAX_LINK_RELEASE_RETRIES = 20
+        const val LINK_RELEASE_RETRY_DELAY_MS = 500L
         const val STANDARD_PMM_DISPLAY = "00F1 0000 0001 4300"
         const val STATE_SELECTED_TAB = "main.selected.tab"
         const val STATE_PMM_STATUS = "main.pmm.status"
