@@ -45,6 +45,7 @@ import io.github.umislat.aimesimulator.ThemeSettings
 import io.github.umislat.aimesimulator.data.CardProfile
 import io.github.umislat.aimesimulator.data.CardStore
 import io.github.umislat.aimesimulator.nfc.DefaultNfcAppChecker
+import io.github.umislat.aimesimulator.nfc.DefaultNfcAppPolicy
 import io.github.umislat.aimesimulator.nfc.HceActivationRetryPolicy
 import io.github.umislat.aimesimulator.nfc.HceSession
 import io.github.umislat.aimesimulator.nfc.NfcAdapterStatePolicy
@@ -475,11 +476,7 @@ class MainActivity : AppCompatActivity() {
                 null,
                 com.google.android.material.R.attr.materialButtonOutlinedStyle
             ).apply {
-                setText(R.string.set_default_nfc_app)
-                setOnClickListener {
-                    defaultNfcStatus = DefaultNfcAppChecker.request(this@MainActivity)
-                    renderDefaultNfcAppStatus()
-                }
+                setOnClickListener { handleDefaultNfcAction() }
             }
             addView(defaultNfcAction, LinearLayout.LayoutParams(-1, -2).apply {
                 topMargin = dp(8)
@@ -854,6 +851,7 @@ class MainActivity : AppCompatActivity() {
     private fun refreshDefaultNfcAppStatus() {
         defaultNfcStatus = DefaultNfcAppChecker.check(this)
         renderDefaultNfcAppStatus()
+        maybeShowDefaultNfcGuidance()
     }
 
     private fun renderDefaultNfcAppStatus() {
@@ -865,13 +863,68 @@ class MainActivity : AppCompatActivity() {
             DefaultNfcAppChecker.Result.UNSUPPORTED -> R.string.default_nfc_app_unsupported
             DefaultNfcAppChecker.Result.FAILED -> R.string.default_nfc_app_failed
         })
+        val action = DefaultNfcAppPolicy.actionFor(defaultNfcPolicyState())
         defaultNfcAction?.apply {
-            visibility = if (defaultNfcStatus == DefaultNfcAppChecker.Result.NOT_DEFAULT) {
-                View.VISIBLE
-            } else {
-                View.GONE
-            }
+            visibility = if (action == DefaultNfcAppPolicy.Action.NONE) View.GONE else View.VISIBLE
+            setText(when (action) {
+                DefaultNfcAppPolicy.Action.REQUEST_DEFAULT -> R.string.set_default_nfc_app
+                DefaultNfcAppPolicy.Action.RESTORE_WALLET -> R.string.restore_wallet_app
+                DefaultNfcAppPolicy.Action.NONE -> R.string.set_default_nfc_app
+            })
         }
+    }
+
+    private fun defaultNfcPolicyState(): DefaultNfcAppPolicy.State = when (defaultNfcStatus) {
+        DefaultNfcAppChecker.Result.ALREADY_DEFAULT -> DefaultNfcAppPolicy.State.DEFAULT
+        DefaultNfcAppChecker.Result.NOT_DEFAULT -> DefaultNfcAppPolicy.State.NOT_DEFAULT
+        else -> DefaultNfcAppPolicy.State.UNAVAILABLE
+    }
+
+    private fun handleDefaultNfcAction() {
+        when (DefaultNfcAppPolicy.actionFor(defaultNfcPolicyState())) {
+            DefaultNfcAppPolicy.Action.REQUEST_DEFAULT -> {
+                defaultNfcStatus = DefaultNfcAppChecker.request(this)
+                renderDefaultNfcAppStatus()
+            }
+            DefaultNfcAppPolicy.Action.RESTORE_WALLET -> {
+                if (!DefaultNfcAppChecker.openWalletSettings(this)) {
+                    Snackbar.make(
+                        contentHost,
+                        R.string.restore_wallet_settings_failed,
+                        Snackbar.LENGTH_LONG
+                    ).show()
+                }
+            }
+            DefaultNfcAppPolicy.Action.NONE -> Unit
+        }
+    }
+
+    private fun maybeShowDefaultNfcGuidance() {
+        val state = defaultNfcPolicyState()
+        if (!DefaultNfcAppPolicy.shouldShowGuidance(
+                state,
+                store.defaultNfcGuidanceShown()
+            )) {
+            return
+        }
+        store.markDefaultNfcGuidanceShown()
+
+        val alreadyDefault = state == DefaultNfcAppPolicy.State.DEFAULT
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.default_nfc_guidance_title)
+            .setMessage(
+                if (alreadyDefault) R.string.default_nfc_guidance_active
+                else R.string.default_nfc_guidance_inactive
+            )
+            .setNegativeButton(
+                if (alreadyDefault) android.R.string.ok else R.string.not_now,
+                null
+            )
+            .setPositiveButton(
+                if (alreadyDefault) R.string.restore_wallet_app
+                else R.string.choose_default_nfc_now
+            ) { _, _ -> handleDefaultNfcAction() }
+            .show()
     }
 
     private fun refreshPmm() = runPmm { PmmManager.inspect() }

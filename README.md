@@ -14,7 +14,7 @@ AimeSimulator 是一个面向 Android 的 NFC-F / FeliCa Lite 卡片配置管理
 ## 快速开始
 
 1. 从 [GitHub Releases](https://github.com/UmiSlat/AimeSimulator/releases) 安装正式 APK。
-2. 打开应用，在 Android 系统界面中确认是否将 AimeSimulator 设为默认 NFC 应用。
+2. 打开应用并阅读首次 NFC 提示；仅在当前系统确有需要时，手动选择将 AimeSimulator 设为默认 NFC 应用。
 3. 在“卡片”页选择“手动添加”或“读取卡片”，检查字段后保存配置。
 4. 选中要使用的配置；首次尝试建议保持 PMm 补丁关闭。
 5. 保持应用位于前台，将手机靠近读卡端测试。
@@ -22,7 +22,7 @@ AimeSimulator 是一个面向 Android 的 NFC-F / FeliCa Lite 卡片配置管理
 无 Root 路径依赖设备原生支持 HCE-F，并正确接受应用声明的 NFCID2、System Code 和 PMm。若动态 IDm 被系统拒绝，可以先尝试“兼容模式”；只有原生路径确实失败时，才需要后文的 LSPosed 或 KernelSU 兼容组件。
 
 > [!IMPORTANT]
-> 将本应用设为默认 NFC 应用会替换现有的默认非接触式支付应用，可能暂时影响手机钱包。测试结束后可在 Android 的默认应用或非接触式付款设置中恢复原应用。
+> 将本应用设为默认 NFC 应用会替换现有的默认非接触式支付应用，可能暂时影响手机钱包。测试结束后请在“状态”页点击“恢复手机钱包”，并在 Android 设置中重新选择原应用。
 
 ## 功能概览
 
@@ -32,7 +32,7 @@ AimeSimulator 是一个面向 Android 的 NFC-F / FeliCa Lite 卡片配置管理
 - Amusement IC 可读取 IDm、加密 S_PAD0、ID 块并解密得到 Access Code。
 - 普通 FeliCa 可尝试读取 IDm、S_PAD0 与 ID 块；旧式 MIFARE Aime 的 UID 与 Access Code 读取已实现，但尚待旧式 Aime 实卡验证。
 - 提供正常模式与兼容模式两种 NFCID2 路由方式。
-- 进入应用时检查系统默认 NFC 支付应用；如果尚未选择本应用，则打开 Android 的系统确认界面。
+- 首次进入时说明默认 NFC 应用对手机钱包的影响，由用户决定是否打开系统选择界面；状态页始终提供恢复钱包入口。
 - 响应 FeliCa Lite 的 Read Without Encryption 请求。
 - 通过标准 HCE-F `t3tPmm-filter` 声明 PMm `00F1000000014300`，兼容的系统无需 Hook。
 - 提供 PMm 兼容补丁：
@@ -94,7 +94,7 @@ io.github.umislat.aimesimulator
 
 1. 保持 LSPosed、PMm 补丁和 KernelSU 模块关闭。
 2. 添加或读取一张卡片配置并选中它。
-3. 在系统提示中确认默认 NFC 应用。
+3. 阅读应用内提示；只有当前 ROM 确有要求时，才在状态页手动发起默认 NFC 应用选择。
 4. 先用正常模式测试；若系统拒绝动态 IDm，再尝试兼容模式。
 5. 只有状态正常但外部读卡仍失败时，再继续配置兼容组件。
 
@@ -181,11 +181,11 @@ MIFARE Classic 能否读取还取决于手机 NFC 控制器和 Android 驱动。
 
 ### 默认 NFC 应用检查
 
-进入主界面时，应用会检查 AimeSimulator 是否为 Android 当前的默认 NFC 支付应用。如果不是，系统会显示默认应用更改确认界面。只有用户在 Android 系统界面中确认后才会更改默认项；应用不会绕过系统授权直接修改。
+进入主界面时，应用会检查 AimeSimulator 是否为 Android 当前的默认 NFC 支付应用。首次得到可用结果时，应用会明确说明切换的影响和恢复方法；只有用户点击“现在选择”或状态页中的“设为默认 NFC 应用”后，才会打开 Android 的系统确认界面。选择“暂不更改”不会改变默认应用，提示也不会反复出现。
 
 为参与系统默认 NFC 应用选择，APK 声明了一个支付类别的最小 HCE-A 辅助服务和固定 AID `F0010203040506`。该服务不承担 Aime/FeliCa 模拟，收到 APDU 时只返回“不支持的指令”；实际卡片模拟仍完全由 HCE-F 服务完成。
 
-选择本应用会替换设备原有的默认 NFC 支付应用，可能影响手机钱包的碰一碰支付。需要恢复时，请在 Android 的“默认应用”“非接触式付款”或钱包设置中重新选择原应用。一次应用会话中只请求一次，取消系统确认不会循环弹窗。
+选择本应用会替换设备原有的默认 NFC 支付应用，可能影响手机钱包的碰一碰支付。AimeSimulator 成为默认应用后，状态页按钮会改为“恢复手机钱包”；该按钮只打开 Android 的默认应用、非接触式付款或 NFC 设置，最终恢复哪个钱包仍由用户在系统界面中确认。应用不会静默更改或记忆钱包选择。
 
 ### 正常模式与兼容模式
 

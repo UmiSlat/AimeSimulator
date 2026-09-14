@@ -2,6 +2,7 @@ package io.github.umislat.aimesimulator.data
 
 import android.content.Context
 import android.util.Log
+import androidx.core.content.edit
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -74,6 +75,13 @@ internal class CardStore(context: Context) {
 
     fun setShowAccessCode(enabled: Boolean) {
         preferences.edit().putBoolean(KEY_SHOW_ACCESS_CODE, enabled).apply()
+    }
+
+    fun defaultNfcGuidanceShown(): Boolean =
+        preferences.getBoolean(KEY_DEFAULT_NFC_GUIDANCE_SHOWN, false)
+
+    fun markDefaultNfcGuidanceShown() {
+        preferences.edit { putBoolean(KEY_DEFAULT_NFC_GUIDANCE_SHOWN, true) }
     }
 
     private fun writeProfiles(profiles: List<CardProfile>): Boolean =
@@ -156,6 +164,7 @@ internal class CardStore(context: Context) {
         private const val KEY_COMPATIBILITY = "compatibility_mode"
         private const val KEY_SHOW_IDM = "show_idm"
         private const val KEY_SHOW_ACCESS_CODE = "show_access_code"
+        private const val KEY_DEFAULT_NFC_GUIDANCE_SHOWN = "default_nfc_guidance_shown"
         private const val KEY_MIGRATION_DONE = "storage_migrated"
     }
 }
