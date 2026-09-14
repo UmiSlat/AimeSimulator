@@ -45,6 +45,19 @@ internal class HceSession(private val context: Context) {
         systemCode
     )
 
+    fun activatePersistedRoute(
+        activity: Activity,
+        profile: CardProfile,
+        routeMode: IdmRouteMode,
+        systemCode: String = SYSTEM_CODE
+    ): PersistedHceRouteWorkflow.Result {
+        val workflow = PersistedHceRouteWorkflow(
+            backend = androidBackend(activity, component),
+            failureReporter = ::persistedRouteFailure
+        )
+        return workflow.activate(profile.routedIdm(routeMode), systemCode)
+    }
+
     private fun activateProfile(
         activity: Activity,
         profileId: String,
@@ -67,7 +80,12 @@ internal class HceSession(private val context: Context) {
     private fun androidBackend(
         activity: Activity,
         serviceComponent: ComponentName
-    ): HceActivationWorkflow.Backend = object : HceActivationWorkflow.Backend {
+    ): AndroidHceBackend = AndroidHceBackend(activity, serviceComponent)
+
+    private inner class AndroidHceBackend(
+        private val activity: Activity,
+        private val serviceComponent: ComponentName
+    ) : HceActivationWorkflow.Backend, PersistedHceRouteWorkflow.Backend {
         private var activeAdapter: NfcAdapter? = null
         private var cachedManager: NfcFCardEmulation? = null
 
@@ -95,6 +113,12 @@ internal class HceSession(private val context: Context) {
 
         override fun registerSystemCode(systemCode: String): Boolean =
             manager().registerSystemCodeForService(serviceComponent, systemCode)
+
+        override fun currentSystemCode(): String? =
+            manager().getSystemCodeForService(serviceComponent)
+
+        override fun currentNfcid2(): String? =
+            manager().getNfcid2ForService(serviceComponent)
 
         override fun enable(): Boolean = manager().enableService(activity, serviceComponent)
 
@@ -200,6 +224,20 @@ internal class HceSession(private val context: Context) {
                 ?.let { "${cause.javaClass.simpleName}: $it" }
                 ?: cause.javaClass.simpleName
             report(Stage.EXCEPTION, detail)
+        }
+    }
+
+    private fun persistedRouteFailure(error: RuntimeException): PersistedHceRouteWorkflow.Result {
+        val report = runtimeFailure(error)
+        return if (report.stage == Stage.SERVICE_RESTARTING) {
+            PersistedHceRouteWorkflow.Result(
+                PersistedHceRouteWorkflow.Outcome.SERVICE_RESTARTING
+            )
+        } else {
+            PersistedHceRouteWorkflow.Result(
+                PersistedHceRouteWorkflow.Outcome.ERROR,
+                report.detail
+            )
         }
     }
 

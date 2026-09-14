@@ -49,6 +49,7 @@ import io.github.umislat.aimesimulator.nfc.DefaultNfcAppChecker
 import io.github.umislat.aimesimulator.nfc.HceActivationRetryPolicy
 import io.github.umislat.aimesimulator.nfc.HceSession
 import io.github.umislat.aimesimulator.nfc.NfcAdapterStatePolicy
+import io.github.umislat.aimesimulator.nfc.PersistedHceRouteWorkflow
 import io.github.umislat.aimesimulator.nfc.RootlessAssessment
 import io.github.umislat.aimesimulator.root.PmmManager
 
@@ -69,10 +70,13 @@ class MainActivity : AppCompatActivity() {
     private var statusPageStatusView: TextView? = null
     private var hceRetryAction: MaterialButton? = null
     private var lastHceReport: HceSession.Report? = null
+    private var persistedRouteReport: PersistedHceRouteWorkflow.Result? = null
     private var defaultHcefReport: HceSession.Report? = null
     private var staticDiagnosticReport: HceSession.Report? = null
     private var rootlessStatusView: TextView? = null
     private var rootlessDetailView: TextView? = null
+    private var persistedRouteModeSwitch: MaterialSwitch? = null
+    private var persistedRouteStatusView: TextView? = null
     private var defaultHcefStatusView: TextView? = null
     private var staticDiagnosticStatusView: TextView? = null
 
@@ -132,7 +136,7 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         foreground = true
         registerNfcStateReceiver()
-        activateSelected()
+        activateConfiguredRoute()
         if (hasResumed && selectedTab == TAB_STATUS) refreshPmm()
         hasResumed = true
         refreshDefaultNfcAppStatus()
@@ -169,6 +173,7 @@ class MainActivity : AppCompatActivity() {
         when (NfcAdapterStatePolicy.actionFor(adapterState, adapterEnabled)) {
             NfcAdapterStatePolicy.Action.MARK_DISABLED -> {
                 cancelActivationRetry()
+                persistedRouteReport = null
                 defaultHcefReport = null
                 staticDiagnosticReport = null
                 lastHceReport = HceSession.Report(HceSession.Stage.NFC_DISABLED)
@@ -176,12 +181,13 @@ class MainActivity : AppCompatActivity() {
             }
             NfcAdapterStatePolicy.Action.MARK_ENABLING -> {
                 cancelActivationRetry()
+                persistedRouteReport = null
                 defaultHcefReport = null
                 staticDiagnosticReport = null
                 lastHceReport = HceSession.Report(HceSession.Stage.SERVICE_RESTARTING)
                 setHceStatus(getString(R.string.hce_waiting_for_service))
             }
-            NfcAdapterStatePolicy.Action.ACTIVATE -> activateSelected()
+            NfcAdapterStatePolicy.Action.ACTIVATE -> activateConfiguredRoute()
             NfcAdapterStatePolicy.Action.IGNORE -> return
         }
         renderRootlessAssessment()
@@ -232,6 +238,8 @@ class MainActivity : AppCompatActivity() {
         hceRetryAction = null
         rootlessStatusView = null
         rootlessDetailView = null
+        persistedRouteModeSwitch = null
+        persistedRouteStatusView = null
         defaultHcefStatusView = null
         staticDiagnosticStatusView = null
         defaultNfcStatusView = null
@@ -358,7 +366,7 @@ class MainActivity : AppCompatActivity() {
             radius = dp(20).toFloat()
             setOnClickListener {
                 store.select(profile.profileId)
-                activateSelected()
+                activateConfiguredRoute()
                 showPage(TAB_CARDS, refreshPmm = false)
             }
             layoutParams = ViewGroup.MarginLayoutParams(-1, -2).apply {
@@ -530,7 +538,7 @@ class MainActivity : AppCompatActivity() {
                 val mode = buttons[checkedId] ?: return@addOnButtonCheckedListener
                 if (!isChecked || mode == store.idmRouteMode()) return@addOnButtonCheckedListener
                 store.setIdmRouteMode(mode)
-                activateSelected()
+                activateConfiguredRoute()
                 showPage(TAB_STATUS, refreshPmm = false)
             }
         }
@@ -564,10 +572,26 @@ class MainActivity : AppCompatActivity() {
                 setPadding(0, dp(6), 0, dp(8))
             }
             addView(rootlessDetailView)
-            defaultHcefStatusView = TextView(this@MainActivity).apply {
+            persistedRouteModeSwitch = MaterialSwitch(this@MainActivity).apply {
+                setText(R.string.persisted_route_only_mode)
+                isChecked = store.persistedRouteOnlyMode()
+                setOnCheckedChangeListener { button, enabled ->
+                    if (!button.isPressed) return@setOnCheckedChangeListener
+                    store.setPersistedRouteOnlyMode(enabled)
+                    activateConfiguredRoute()
+                }
+            }
+            addView(persistedRouteModeSwitch)
+            persistedRouteStatusView = TextView(this@MainActivity).apply {
                 textSize = 13f
                 alpha = 0.76f
                 setPadding(0, dp(4), 0, dp(10))
+            }
+            addView(persistedRouteStatusView)
+            defaultHcefStatusView = TextView(this@MainActivity).apply {
+                textSize = 13f
+                alpha = 0.76f
+                setPadding(0, 0, 0, dp(10))
             }
             addView(defaultHcefStatusView)
             staticDiagnosticStatusView = TextView(this@MainActivity).apply {
@@ -582,8 +606,16 @@ class MainActivity : AppCompatActivity() {
                 com.google.android.material.R.attr.materialButtonOutlinedStyle
             ).apply {
                 setText(R.string.rootless_check_88b4)
-                setOnClickListener { activateSelected() }
+                setOnClickListener { activateDynamicRoute() }
             }, LinearLayout.LayoutParams(-1, -2))
+            addView(MaterialButton(
+                this@MainActivity,
+                null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle
+            ).apply {
+                setText(R.string.rootless_reuse_persisted_route)
+                setOnClickListener { activatePersistedRoute() }
+            }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6) })
             addView(MaterialButton(
                 this@MainActivity,
                 null,
@@ -877,15 +909,36 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
+    private fun activateConfiguredRoute(
+        attempt: Int = 0,
+        retryKind: ActivationRetryKind? = null
+    ) {
+        if (store.persistedRouteOnlyMode()) {
+            activatePersistedRoute(attempt, retryKind)
+        } else {
+            activateSelected(attempt, retryKind)
+        }
+    }
+
+    private fun activateDynamicRoute() {
+        if (store.persistedRouteOnlyMode()) {
+            store.setPersistedRouteOnlyMode(false)
+            persistedRouteModeSwitch?.isChecked = false
+        }
+        activateSelected()
+    }
+
     private fun activateSelected(
         attempt: Int = 0,
         retryKind: ActivationRetryKind? = null
     ) {
         cancelActivationRetry()
+        persistedRouteReport = null
         defaultHcefReport = null
         staticDiagnosticReport = null
         val selected = store.selectedProfile()
         if (selected == null) {
+            session.deactivate(this)
             lastHceReport = null
             setHceStatus(getString(R.string.select_or_add_card))
             renderRootlessAssessment()
@@ -944,10 +997,50 @@ class MainActivity : AppCompatActivity() {
         renderRootlessAssessment()
     }
 
+    private fun activatePersistedRoute(
+        attempt: Int = 0,
+        retryKind: ActivationRetryKind? = null
+    ) {
+        cancelActivationRetry()
+        lastHceReport = null
+        defaultHcefReport = null
+        staticDiagnosticReport = null
+        val selected = store.selectedProfile()
+        if (selected == null) {
+            session.deactivate(this)
+            persistedRouteReport = null
+            setHceStatus(getString(R.string.select_or_add_card))
+            renderRootlessAssessment()
+            return
+        }
+        val result = session.activatePersistedRoute(this, selected, store.idmRouteMode())
+        persistedRouteReport = result
+        val message = if (result.outcome == PersistedHceRouteWorkflow.Outcome.SERVICE_RESTARTING) {
+            val serviceAttempt = if (
+                retryKind == ActivationRetryKind.SERVICE_RESTART
+            ) attempt else 0
+            if (serviceAttempt < MAX_SERVICE_RESTART_RETRIES) {
+                scheduleActivationRetry(
+                    serviceAttempt + 1,
+                    ActivationRetryKind.SERVICE_RESTART
+                )
+                getString(R.string.hce_waiting_for_service)
+            } else {
+                getString(R.string.hce_service_restart_timeout)
+            }
+        } else {
+            persistedRouteMessage(result)
+        }
+        setHceStatus(message)
+        renderRootlessAssessment()
+    }
+
     private fun activateDefaultHcefCard() {
         cancelActivationRetry()
+        persistedRouteReport = null
         staticDiagnosticReport = null
         if (store.selectedProfile() == null) {
+            session.deactivate(this)
             defaultHcefReport = null
             setHceStatus(getString(R.string.select_or_add_card))
             renderDiagnosticReports()
@@ -964,6 +1057,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun activateStaticAimeDiagnostic() {
         cancelActivationRetry()
+        persistedRouteReport = null
         defaultHcefReport = null
         val report = session.activateStaticAimeDiagnostic(this)
         staticDiagnosticReport = report
@@ -990,6 +1084,12 @@ class MainActivity : AppCompatActivity() {
     ) View.VISIBLE else View.GONE
 
     private fun renderRootlessAssessment() {
+        if (store.persistedRouteOnlyMode()) {
+            rootlessStatusView?.setText(R.string.persisted_route_only_title)
+            rootlessDetailView?.setText(R.string.persisted_route_only_detail)
+            renderDiagnosticReports()
+            return
+        }
         val assessment = RootlessAssessment.from(
             lastHceReport,
             store.idmRouteMode(),
@@ -1042,9 +1142,41 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderDiagnosticReports() {
+        renderPersistedRoute()
         renderDefaultHcefCard()
         renderStaticDiagnostic()
     }
+
+    private fun renderPersistedRoute() {
+        val report = persistedRouteReport
+        persistedRouteStatusView?.text = if (report == null) {
+            getString(R.string.persisted_route_idle)
+        } else {
+            persistedRouteMessage(report)
+        }
+    }
+
+    private fun persistedRouteMessage(report: PersistedHceRouteWorkflow.Result): String =
+        when (report.outcome) {
+            PersistedHceRouteWorkflow.Outcome.READY ->
+                getString(R.string.persisted_route_ready)
+            PersistedHceRouteWorkflow.Outcome.UNSUPPORTED ->
+                getString(R.string.rootless_unsupported_detail)
+            PersistedHceRouteWorkflow.Outcome.NFC_DISABLED ->
+                getString(R.string.rootless_nfc_disabled_detail)
+            PersistedHceRouteWorkflow.Outcome.SERVICE_RESTARTING ->
+                getString(R.string.rootless_checking_detail)
+            PersistedHceRouteWorkflow.Outcome.SYSTEM_CODE_MISMATCH ->
+                getString(R.string.persisted_route_system_code_mismatch)
+            PersistedHceRouteWorkflow.Outcome.NFCID2_MISMATCH ->
+                getString(R.string.persisted_route_nfcid2_mismatch)
+            PersistedHceRouteWorkflow.Outcome.ENABLE_FAILED ->
+                getString(R.string.persisted_route_enable_failed)
+            PersistedHceRouteWorkflow.Outcome.ERROR -> getString(
+                R.string.persisted_route_failed,
+                report.detail.ifBlank { getString(R.string.rootless_unknown_error) }
+            )
+        }
 
     private fun renderDefaultHcefCard() {
         val report = defaultHcefReport
@@ -1113,7 +1245,7 @@ class MainActivity : AppCompatActivity() {
     private fun scheduleActivationRetry(attempt: Int, kind: ActivationRetryKind) {
         activationRetry = Runnable {
             activationRetry = null
-            if (foreground) activateSelected(attempt, kind)
+            if (foreground) activateConfiguredRoute(attempt, kind)
         }.also {
             val delay = when (kind) {
                 ActivationRetryKind.SERVICE_RESTART -> SERVICE_RESTART_RETRY_DELAY_MS
@@ -1297,7 +1429,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 if (initial == null && store.selectedProfile() == null) store.select(profile.profileId)
                 dialog.dismiss()
-                activateSelected()
+                activateConfiguredRoute()
                 showPage(TAB_CARDS, refreshPmm = false)
                 bottomNavigation.selectedItemId = TAB_CARDS
             }
@@ -1393,7 +1525,7 @@ class MainActivity : AppCompatActivity() {
             .setNegativeButton(android.R.string.cancel, null)
             .setPositiveButton(R.string.delete) { _, _ ->
                 store.remove(profile.profileId)
-                activateSelected()
+                activateConfiguredRoute()
                 showPage(TAB_CARDS, refreshPmm = false)
             }
             .show()

@@ -2,6 +2,7 @@ package io.github.umislat.aimesimulator.data
 
 import android.content.Context
 import android.util.Log
+import androidx.core.content.edit
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -65,6 +66,13 @@ internal class CardStore(context: Context) {
 
     fun setIdmRouteMode(mode: IdmRouteMode) {
         preferences.edit().putString(KEY_IDM_ROUTE_MODE, mode.name).apply()
+    }
+
+    fun persistedRouteOnlyMode(): Boolean =
+        preferences.getBoolean(KEY_PERSISTED_ROUTE_ONLY_MODE, false)
+
+    fun setPersistedRouteOnlyMode(enabled: Boolean) {
+        preferences.edit { putBoolean(KEY_PERSISTED_ROUTE_ONLY_MODE, enabled) }
     }
 
     fun showIdm(): Boolean = preferences.getBoolean(KEY_SHOW_IDM, true)
@@ -171,6 +179,7 @@ internal class CardStore(context: Context) {
         private const val KEY_SELECTED = "selected_profile"
         private const val KEY_COMPATIBILITY = "compatibility_mode"
         private const val KEY_IDM_ROUTE_MODE = "idm_route_mode"
+        private const val KEY_PERSISTED_ROUTE_ONLY_MODE = "persisted_route_only_mode"
         private const val KEY_SHOW_IDM = "show_idm"
         private const val KEY_SHOW_ACCESS_CODE = "show_access_code"
         private const val KEY_MIGRATION_DONE = "storage_migrated"

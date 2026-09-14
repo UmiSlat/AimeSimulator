@@ -62,6 +62,8 @@ AimeSimulator 是一个面向 Android 的 NFC-F / FeliCa Lite 卡片配置管理
 | 放宽 NFCID2 / System Code 校验 | 按需使用 LSPosed | 作用域仅为 `com.android.nfc` |
 | PMm 厂商兼容补丁 | 按需使用 Root | Android 15+ 还需要 KernelSU 模块 |
 
+这里的“标准 HCE-F 模拟”是指 Android 公开接口允许的参数范围。AOSP 的动态 System Code 校验要求首位为 `4` 且末两位不能为 `FF`，因此 AIME 使用的 `88B4` 在标准实现上通常仍需要校验 Hook；`4000` 只能用于通用 HCE-F 诊断，不能替代 AIME 路线。
+
 ### 兼容性组件
 
 | 系统版本 | LSPosed API 101 | Root | KernelSU 模块 | PMm 实现 |
@@ -109,6 +111,24 @@ io.github.umislat.aimesimulator
 LSPosed 只会在目标进程启动时装载模块。设备开机后才启用 AimeSimulator 模块或修改作用域时，必须再次重启设备（或可靠地重启 `com.android.nfc`）；仅授予 AimeSimulator Root 权限不会让校验 Hook 立即生效。反过来，关闭模块后也必须重启，才能得到不受残留 Hook 影响的无 Root 测试结果。
 
 如果系统原生接受所用 NFCID2，并正确采用 APK 中的 `t3tPmm-filter`，可以不启用 LSPosed 或 PMm 补丁。是否需要兜底组件应以实际读卡结果为准。
+
+### 实验：复用系统已保存的 88B4 路线
+
+实验分支提供“复用已保存的 88B4 路线”入口，用于验证 Android NFC 服务能否在校验 Hook 关闭后继续使用此前保存的动态 HCE-F 映射。该入口只读取当前服务的 System Code 与 NFCID2；两者与当前卡片和路线模式完全一致时才调用 `enableService()`，不会调用 NFCID2 或 System Code 的注册接口。
+
+建议的验证顺序如下：
+
+1. 在校验 Hook 已随 `com.android.nfc` 启动的状态下，使用当前安装的 AimeSimulator 对目标卡片与路线模式完成一次正常激活。
+2. 在状态页开启“启动与自动恢复时仅复用已保存路线”，并确认界面报告当前保存值匹配。该开关会保留到重启后，阻止应用启动时先调用动态注册接口。
+3. 关闭 LSPosed 模块与 PMm 补丁并冷重启设备，不要卸载应用或清除 NFC 系统数据。
+4. 保持同一张卡片和同一路线模式，打开应用；也可在状态页点击“复用已保存的 88B4 路线”重试只读核对。
+5. 只有界面报告 System Code 与 NFCID2 均匹配并成功启用后，才继续使用外部读卡器核对 RF System Code、IDm 与 PMm。
+
+该路径已在一台 Android 16 / HyperOS、ST54L NFC 设备上完成严格实机验证：先在 Hook 生效时预置原 IDm + `88B4`，随后关闭 LSPosed 模块与 PMm 模块并冷重启；应用仅复用保存值后，Android 路由、HINATA 定向轮询和服务 `000B` 的 Block `00/82/85` 均通过，PMm 为 `00F1000000014300`，达到 L3。保持模块关闭后又连续完成 3 次冷重启，每次均恢复保存的 `88B4` 路由，最后一轮再次通过 HINATA L3；切换到未预置的固定 NFCID2 时也会明确停止，切回精确组合后可恢复。
+
+此结果仍只是特定设备上的“预置后免模块运行”，不是从零开始的无 Root 方案，也不代表原厂机台已接受。
+
+首次写入仍依赖已生效的校验 Hook。卸载应用、清除 NFC 服务数据、改变签名/包名或切换卡片路线都可能使预置失效；其他设备是否保留动态映射、是否采用 APK 中的 PMm，以及能否达到 L3，仍必须逐机实测。
 
 ### 3B. Android 14 及以下的 PMm 兜底补丁（按需）
 
