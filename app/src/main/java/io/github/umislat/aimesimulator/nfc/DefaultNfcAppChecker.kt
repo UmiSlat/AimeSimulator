@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.nfc.NfcAdapter
 import android.nfc.cardemulation.CardEmulation
 import android.os.Build
+import android.provider.Settings
 import android.util.Log
 import androidx.annotation.RequiresApi
 
@@ -71,6 +72,33 @@ internal object DefaultNfcAppChecker {
             Log.w(TAG, "Unable to request the default NFC application", error)
             Result.FAILED
         }
+    }
+
+    fun openWalletSettings(activity: Activity): Boolean {
+        val actions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            listOf(
+                Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS,
+                Settings.ACTION_NFC_PAYMENT_SETTINGS,
+                Settings.ACTION_NFC_SETTINGS
+            )
+        } else {
+            listOf(
+                Settings.ACTION_NFC_PAYMENT_SETTINGS,
+                Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS,
+                Settings.ACTION_NFC_SETTINGS
+            )
+        }
+        var lastError: RuntimeException? = null
+        actions.forEach { action ->
+            try {
+                activity.startActivity(Intent(action))
+                return true
+            } catch (error: RuntimeException) {
+                lastError = error
+            }
+        }
+        Log.w(TAG, "Unable to open wallet settings", lastError)
+        return false
     }
 
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)

@@ -87,6 +87,13 @@ internal class CardStore(context: Context) {
         preferences.edit().putBoolean(KEY_SHOW_ACCESS_CODE, enabled).apply()
     }
 
+    fun defaultNfcGuidanceShown(): Boolean =
+        preferences.getBoolean(KEY_DEFAULT_NFC_GUIDANCE_SHOWN, false)
+
+    fun markDefaultNfcGuidanceShown() {
+        preferences.edit { putBoolean(KEY_DEFAULT_NFC_GUIDANCE_SHOWN, true) }
+    }
+
     private fun writeProfiles(profiles: List<CardProfile>): Boolean =
         preferences.edit().putString(KEY_PROFILES, encodeProfiles(profiles)).commit()
 
@@ -182,6 +189,7 @@ internal class CardStore(context: Context) {
         private const val KEY_PERSISTED_ROUTE_ONLY_MODE = "persisted_route_only_mode"
         private const val KEY_SHOW_IDM = "show_idm"
         private const val KEY_SHOW_ACCESS_CODE = "show_access_code"
+        private const val KEY_DEFAULT_NFC_GUIDANCE_SHOWN = "default_nfc_guidance_shown"
         private const val KEY_MIGRATION_DONE = "storage_migrated"
     }
 }
