@@ -75,12 +75,12 @@
     <string name="idm_field_error">Enter exactly 16 hexadecimal characters</string>
     <string name="block_field_error">Enter exactly 32 hexadecimal characters, or leave blank</string>
     <string name="invalid_card_fields">Check the IDm and optional block values. Only exact-length hexadecimal input is accepted.</string>
-    <string name="save_failed">The profile could not be saved.</string>
     <string name="delete_card">Delete profile?</string>
     <string name="delete_card_message">“%1$s” will be removed from this device.</string>
     <string name="hce_ready">Ready to emulate %1$s</string>
     <string name="checking_hce_status">Checking NFC status…</string>
     <string name="simulation_status">Simulation status</string>
+    <string name="system_requirements">System requirements</string>
     <string name="hce_status_summary">Keep the app in the foreground while Android registers the selected profile as an NFC-F service.</string>
     <string name="status_profile_normal">%1$s · Normal mode</string>
     <string name="status_profile_compatibility">%1$s · Compatibility mode</string>
@@ -97,7 +97,6 @@
     <string name="hce_waiting_for_link_release">Waiting for the current NFC-F link to close…</string>
     <string name="hce_link_release_timeout">The failure may be caused by an NFC-F link that has not closed. Move the phone away from the reader, then tap Re-register.</string>
     <string name="hce_retry_registration">Re-register</string>
-    <string name="hce_storage_failed">The selected card profile could not be saved.</string>
     <string name="hce_nfcid2_rejected">Android rejected the current NFCID2.</string>
     <string name="hce_system_code_rejected">Android rejected the System Code 88B4 required by AIME.</string>
     <string name="hce_enable_failed">Android could not enable the foreground HCE-F service.</string>
@@ -129,7 +128,6 @@
     <string name="show_access_code">Show printed Access Code</string>
     <string name="application_section">Application</string>
     <string name="open_about">About AimeSimulator</string>
-    <string name="pmm_patch">PMm compatibility patch</string>
     <string name="enable_pmm_patch">Enable PMm patch</string>
     <string name="checking_status">Checking root integration…</string>
     <string name="pmm_explanation">The APK declares the compatible PMm through Android HCE-F. Enable this fallback patch only when the device ignores or replaces that value. Android 15 and later use the bundled KernelSU module; earlier releases use the Xposed framework hook.</string>

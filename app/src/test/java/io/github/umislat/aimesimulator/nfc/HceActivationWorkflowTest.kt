@@ -6,7 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HceActivationWorkflowTest {
-    @Test fun unsupportedDeviceStopsBeforeAdapterAndStorage() {
+    @Test fun unsupportedDeviceStopsBeforeAdapterAndSelection() {
         val backend = FakeBackend(supported = false)
         val selection = FakeSelection(PREVIOUS_PROFILE)
 
@@ -41,20 +41,6 @@ class HceActivationWorkflowTest {
         assertEquals(HceSession.Stage.NFC_DISABLED, report.stage)
         assertEquals(listOf("supported", "availability"), backend.calls)
         assertTrue(selection.attempts.isEmpty())
-    }
-
-    @Test fun selectionFailureReportsStorageAndSkipsRegistration() {
-        val backend = FakeBackend()
-        val selection = FakeSelection(PREVIOUS_PROFILE).apply {
-            acceptNextSelection = false
-        }
-
-        val report = workflow(backend, selection).activate(TARGET_PROFILE, NFCID2, SYSTEM_CODE)
-
-        assertEquals(HceSession.Stage.STORAGE, report.stage)
-        assertEquals(listOf(TARGET_PROFILE), selection.attempts)
-        assertEquals(PREVIOUS_PROFILE, selection.currentId)
-        assertEquals(listOf("supported", "availability"), backend.calls)
     }
 
     @Test fun nfcid2RejectionRestoresPreviousSelection() {
@@ -150,7 +136,7 @@ class HceActivationWorkflowTest {
         assertEquals(null, selection.currentId)
     }
 
-    @Test fun availabilityExceptionUsesFailureReporterBeforeStorageChanges() {
+    @Test fun availabilityExceptionUsesFailureReporterBeforeSelectionChanges() {
         val backend = FakeBackend(throwOn = Operation.AVAILABILITY)
         val selection = FakeSelection(PREVIOUS_PROFILE)
         val reportedErrors = mutableListOf<RuntimeException>()
@@ -254,17 +240,13 @@ class HceActivationWorkflowTest {
     private class FakeSelection(initialId: String?) : HceActivationWorkflow.Selection {
         var currentId: String? = initialId
             private set
-        var acceptNextSelection = true
         val attempts = mutableListOf<String?>()
 
         override fun selectedProfileId(): String? = currentId
 
-        override fun select(profileId: String?): Boolean {
+        override fun select(profileId: String?) {
             attempts += profileId
-            val accepted = acceptNextSelection
-            acceptNextSelection = true
-            if (accepted) currentId = profileId
-            return accepted
+            currentId = profileId
         }
     }
 

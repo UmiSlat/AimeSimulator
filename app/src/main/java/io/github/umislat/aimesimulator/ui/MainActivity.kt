@@ -434,32 +434,57 @@ class MainActivity : AppCompatActivity() {
                 })
             })
         })
-        content.addView(sectionTitle(R.string.default_nfc_app))
-        content.addView(defaultNfcAppCard())
-        content.addView(MaterialSwitch(this).apply {
-            setText(R.string.compatibility_mode)
-            isChecked = store.compatibilityMode()
-            setOnCheckedChangeListener { button, enabled ->
-                if (!button.isPressed) return@setOnCheckedChangeListener
-                store.setCompatibilityMode(enabled)
-                activateSelected()
-                showPage(TAB_STATUS, refreshPmm = false)
-            }
-        })
+        content.addView(sectionTitle(R.string.current_profile))
+        content.addView(currentProfileCard())
+        content.addView(sectionTitle(R.string.route_mode))
+        content.addView(compatibilityModeSelector())
         content.addView(TextView(this).apply {
             setText(R.string.compatibility_mode_summary)
             textSize = 13f
             alpha = 0.72f
             setPadding(0, 0, 0, dp(8))
         })
-
-        content.addView(sectionTitle(R.string.current_profile))
-        content.addView(currentProfileCard())
-        content.addView(sectionTitle(R.string.pmm_patch))
-        content.addView(pmmCard())
+        content.addView(sectionTitle(R.string.system_requirements))
+        content.addView(defaultNfcAppCard())
+        content.addView(pmmCard().apply { applyMargins(vertical = 6) })
         scroll.addView(content)
         return scroll
     }
+
+    private fun compatibilityModeSelector(): MaterialButtonToggleGroup {
+        val normalId = View.generateViewId()
+        val compatibilityId = View.generateViewId()
+        return MaterialButtonToggleGroup(this).apply {
+            isSingleSelection = true
+            isSelectionRequired = true
+            addView(statusModeButton(normalId, R.string.normal_mode))
+            addView(statusModeButton(compatibilityId, R.string.compatibility_mode))
+            check(if (store.compatibilityMode()) compatibilityId else normalId)
+            addOnButtonCheckedListener { _, checkedId, isChecked ->
+                if (!isChecked) return@addOnButtonCheckedListener
+                val compatibilityEnabled = checkedId == compatibilityId
+                if (compatibilityEnabled == store.compatibilityMode()) {
+                    return@addOnButtonCheckedListener
+                }
+                store.setCompatibilityMode(compatibilityEnabled)
+                activateSelected()
+                showPage(TAB_STATUS, refreshPmm = false)
+            }
+        }
+    }
+
+    private fun statusModeButton(id: Int, @androidx.annotation.StringRes label: Int): MaterialButton =
+        MaterialButton(
+            this,
+            null,
+            com.google.android.material.R.attr.materialButtonOutlinedStyle
+        ).apply {
+            this.id = id
+            setText(label)
+            minWidth = 0
+            minimumWidth = 0
+            layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
+        }
 
     private fun defaultNfcAppCard(): MaterialCardView = MaterialCardView(this).apply {
         radius = dp(20).toFloat()
@@ -467,8 +492,14 @@ class MainActivity : AppCompatActivity() {
         addView(LinearLayout(this@MainActivity).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(18), dp(14), dp(18), dp(14))
+            addView(TextView(this@MainActivity).apply {
+                setText(R.string.default_nfc_app)
+                textSize = 16f
+                setTypeface(typeface, Typeface.BOLD)
+            })
             defaultNfcStatusView = TextView(this@MainActivity).apply {
                 textSize = 14f
+                setPadding(0, dp(6), 0, 0)
             }
             addView(defaultNfcStatusView)
             defaultNfcAction = MaterialButton(
@@ -803,7 +834,6 @@ class MainActivity : AppCompatActivity() {
                 } else getString(R.string.hce_service_restart_timeout)
             }
             HceSession.Stage.LINK_ACTIVE -> getString(R.string.hce_waiting_for_link_release)
-            HceSession.Stage.STORAGE -> getString(R.string.hce_storage_failed)
             HceSession.Stage.ID -> getString(R.string.hce_nfcid2_rejected)
             HceSession.Stage.SYSTEM_CODE -> getString(R.string.hce_system_code_rejected)
             HceSession.Stage.ENABLE -> getString(R.string.hce_enable_failed)
@@ -1067,10 +1097,7 @@ class MainActivity : AppCompatActivity() {
                     Snackbar.make(root, R.string.invalid_card_fields, Snackbar.LENGTH_LONG).show()
                     return@setOnClickListener
                 }
-                if (!store.put(profile)) {
-                    Snackbar.make(root, R.string.save_failed, Snackbar.LENGTH_LONG).show()
-                    return@setOnClickListener
-                }
+                store.put(profile)
                 if (initial == null && store.selectedProfile() == null) store.select(profile.profileId)
                 dialog.dismiss()
                 activateSelected()

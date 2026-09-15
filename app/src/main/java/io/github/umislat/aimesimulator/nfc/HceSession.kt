@@ -13,7 +13,7 @@ import io.github.umislat.aimesimulator.data.CardStore
 
 internal class HceSession(private val context: Context) {
     enum class Stage {
-        READY, UNSUPPORTED, NFC_DISABLED, SERVICE_RESTARTING, LINK_ACTIVE, STORAGE, ID,
+        READY, UNSUPPORTED, NFC_DISABLED, SERVICE_RESTARTING, LINK_ACTIVE, ID,
         SYSTEM_CODE, ENABLE, EXCEPTION
     }
 
@@ -50,7 +50,7 @@ internal class HceSession(private val context: Context) {
             selection = object : HceActivationWorkflow.Selection {
                 override fun selectedProfileId(): String? = store.selectedProfile()?.profileId
 
-                override fun select(profileId: String?): Boolean = store.select(profileId)
+                override fun select(profileId: String?) = store.select(profileId)
             },
             failureReporter = ::runtimeFailure
         )

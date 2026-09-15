@@ -74,12 +74,12 @@
     <string name="idm_field_error">请输入恰好 16 位十六进制内容</string>
     <string name="block_field_error">请输入恰好 32 位十六进制内容，或留空</string>
     <string name="invalid_card_fields">请检查 IDm 和可选数据块；只接受长度准确的十六进制内容。</string>
-    <string name="save_failed">无法保存这张卡片配置。</string>
     <string name="delete_card">删除配置？</string>
     <string name="delete_card_message">“%1$s”将从本机移除。</string>
     <string name="hce_ready">已准备模拟 %1$s</string>
     <string name="checking_hce_status">正在检查 NFC 状态…</string>
     <string name="simulation_status">模拟状态</string>
+    <string name="system_requirements">系统要求</string>
     <string name="hce_status_summary">保持应用位于前台，Android 会将当前配置注册为 NFC-F 服务。</string>
     <string name="status_profile_normal">%1$s · 正常模式</string>
     <string name="status_profile_compatibility">%1$s · 兼容模式</string>
@@ -96,7 +96,6 @@
     <string name="hce_waiting_for_link_release">正在等待当前 NFC-F 链路释放…</string>
     <string name="hce_link_release_timeout">当前失败可能由尚未结束的 NFC-F 链路造成。请将手机移开读卡器，再点击“重新注册”。</string>
     <string name="hce_retry_registration">重新注册</string>
-    <string name="hce_storage_failed">无法保存当前选中的卡片配置。</string>
     <string name="hce_nfcid2_rejected">系统拒绝了当前 NFCID2。</string>
     <string name="hce_system_code_rejected">系统拒绝了 AIME 所需的 System Code 88B4。</string>
     <string name="hce_enable_failed">Android 未能启用前台 HCE-F 服务。</string>
@@ -128,7 +127,6 @@
     <string name="show_access_code">显示卡面 Access Code</string>
     <string name="application_section">应用</string>
     <string name="open_about">关于 AimeSimulator</string>
-    <string name="pmm_patch">PMm 兼容补丁</string>
     <string name="enable_pmm_patch">启用 PMm 补丁</string>
     <string name="checking_status">正在检查 Root 集成…</string>
     <string name="pmm_explanation">APK 已通过 Android HCE-F 声明兼容 PMm；只有设备忽略或替换该值时才需要开启此兜底补丁。Android 15 及以上版本使用随附的 KernelSU 模块，较早版本使用 Xposed 框架 Hook。</string>

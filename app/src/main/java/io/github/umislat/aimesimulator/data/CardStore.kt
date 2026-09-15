@@ -36,45 +36,46 @@ internal class CardStore(context: Context) {
     }
 
     @Synchronized
-    fun put(profile: CardProfile): Boolean {
+    fun put(profile: CardProfile) {
         val updated = profiles().toMutableList()
         val index = updated.indexOfFirst { it.profileId == profile.profileId }
         if (index >= 0) updated[index] = profile else updated += profile
-        return writeProfiles(updated)
+        writeProfiles(updated)
     }
 
     @Synchronized
-    fun remove(profileId: String): Boolean {
+    fun remove(profileId: String) {
         val updated = profiles().filterNot { it.profileId == profileId }
-        val editor = preferences.edit().putString(KEY_PROFILES, encodeProfiles(updated))
-        if (preferences.getString(KEY_SELECTED, null) == profileId) editor.remove(KEY_SELECTED)
-        return editor.commit()
+        preferences.edit {
+            putString(KEY_PROFILES, encodeProfiles(updated))
+            if (preferences.getString(KEY_SELECTED, null) == profileId) remove(KEY_SELECTED)
+        }
     }
 
     @Synchronized
-    fun select(profileId: String?): Boolean {
-        if (preferences.getString(KEY_SELECTED, null) == profileId) return true
-        val editor = preferences.edit()
-        if (profileId == null) editor.remove(KEY_SELECTED) else editor.putString(KEY_SELECTED, profileId)
-        return editor.commit()
+    fun select(profileId: String?) {
+        if (preferences.getString(KEY_SELECTED, null) == profileId) return
+        preferences.edit {
+            if (profileId == null) remove(KEY_SELECTED) else putString(KEY_SELECTED, profileId)
+        }
     }
 
     fun compatibilityMode(): Boolean = preferences.getBoolean(KEY_COMPATIBILITY, false)
 
     fun setCompatibilityMode(enabled: Boolean) {
-        preferences.edit().putBoolean(KEY_COMPATIBILITY, enabled).apply()
+        preferences.edit { putBoolean(KEY_COMPATIBILITY, enabled) }
     }
 
     fun showIdm(): Boolean = preferences.getBoolean(KEY_SHOW_IDM, true)
 
     fun setShowIdm(enabled: Boolean) {
-        preferences.edit().putBoolean(KEY_SHOW_IDM, enabled).apply()
+        preferences.edit { putBoolean(KEY_SHOW_IDM, enabled) }
     }
 
     fun showAccessCode(): Boolean = preferences.getBoolean(KEY_SHOW_ACCESS_CODE, true)
 
     fun setShowAccessCode(enabled: Boolean) {
-        preferences.edit().putBoolean(KEY_SHOW_ACCESS_CODE, enabled).apply()
+        preferences.edit { putBoolean(KEY_SHOW_ACCESS_CODE, enabled) }
     }
 
     fun defaultNfcGuidanceShown(): Boolean =
@@ -84,8 +85,9 @@ internal class CardStore(context: Context) {
         preferences.edit { putBoolean(KEY_DEFAULT_NFC_GUIDANCE_SHOWN, true) }
     }
 
-    private fun writeProfiles(profiles: List<CardProfile>): Boolean =
-        preferences.edit().putString(KEY_PROFILES, encodeProfiles(profiles)).commit()
+    private fun writeProfiles(profiles: List<CardProfile>) {
+        preferences.edit { putString(KEY_PROFILES, encodeProfiles(profiles)) }
+    }
 
     private fun encodeProfiles(profiles: List<CardProfile>): String {
         val array = JSONArray()
@@ -145,12 +147,13 @@ internal class CardStore(context: Context) {
             }.onFailure { Log.w(TAG, "Existing profile import failed", it) }
         }
 
-        val editor = preferences.edit().putBoolean(KEY_MIGRATION_DONE, true)
-        if (profiles().isEmpty() && imported.isNotEmpty()) {
-            editor.putString(KEY_PROFILES, encodeProfiles(imported))
-            editor.putString(KEY_SELECTED, imported.first().profileId)
+        preferences.edit {
+            putBoolean(KEY_MIGRATION_DONE, true)
+            if (profiles().isEmpty() && imported.isNotEmpty()) {
+                putString(KEY_PROFILES, encodeProfiles(imported))
+                putString(KEY_SELECTED, imported.first().profileId)
+            }
         }
-        editor.apply()
     }
 
     private fun JSONObject.optNullableString(key: String): String? =
