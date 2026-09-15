@@ -59,35 +59,15 @@ internal object DefaultNfcAppChecker {
     fun request(activity: Activity): Result {
         val current = check(activity)
         if (current != Result.NOT_DEFAULT) return current
-        return try {
-            val request = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-                walletRoleManager(activity)?.createRequestRoleIntent(RoleManager.ROLE_WALLET)
-                    ?: createLegacyRequest(activity)
-            } else {
-                createLegacyRequest(activity)
-            }
-            activity.startActivity(request)
-            Result.REQUESTED
-        } catch (error: RuntimeException) {
-            Log.w(TAG, "Unable to request the default NFC application", error)
-            Result.FAILED
-        }
+        return if (openWalletSettings(activity)) Result.REQUESTED else Result.FAILED
     }
 
     fun openWalletSettings(activity: Activity): Boolean {
-        val actions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-            listOf(
-                Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS,
-                Settings.ACTION_NFC_PAYMENT_SETTINGS,
-                Settings.ACTION_NFC_SETTINGS
-            )
-        } else {
-            listOf(
-                Settings.ACTION_NFC_PAYMENT_SETTINGS,
-                Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS,
-                Settings.ACTION_NFC_SETTINGS
-            )
-        }
+        val actions = listOf(
+            Settings.ACTION_NFC_PAYMENT_SETTINGS,
+            Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS,
+            Settings.ACTION_NFC_SETTINGS
+        )
         var lastError: RuntimeException? = null
         actions.forEach { action ->
             try {
@@ -105,14 +85,6 @@ internal object DefaultNfcAppChecker {
     private fun walletRoleManager(activity: Activity): RoleManager? =
         activity.getSystemService(RoleManager::class.java)
             ?.takeIf { it.isRoleAvailable(RoleManager.ROLE_WALLET) }
-
-    @Suppress("DEPRECATION")
-    private fun createLegacyRequest(activity: Activity): Intent {
-        val service = ComponentName(activity, DefaultNfcService::class.java)
-        return Intent(CardEmulation.ACTION_CHANGE_DEFAULT)
-            .putExtra(CardEmulation.EXTRA_CATEGORY, CardEmulation.CATEGORY_PAYMENT)
-            .putExtra(CardEmulation.EXTRA_SERVICE_COMPONENT, service)
-    }
 
     private const val TAG = "AimeDefaultNfc"
 }
