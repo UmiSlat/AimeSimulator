@@ -7,8 +7,7 @@ import io.github.umislat.aimesimulator.BuildConfig
 import io.github.umislat.aimesimulator.data.CardProfile
 import io.github.umislat.aimesimulator.data.CardStore
 
-open class AimeHostService : HostNfcFService() {
-    protected open val imageSystemCode: String = HceSession.SYSTEM_CODE
+class AimeHostService : HostNfcFService() {
     private val store by lazy { CardStore(this) }
     private var imageCache: CachedImage? = null
 
@@ -53,7 +52,7 @@ open class AimeHostService : HostNfcFService() {
     @Synchronized
     private fun imageFor(profile: CardProfile): CardImage {
         imageCache?.takeIf { it.profile == profile }?.let { return it.image }
-        return CardImage(profile, imageSystemCode).also { image ->
+        return CardImage(profile).also { image ->
             imageCache = CachedImage(profile, image)
         }
     }
@@ -67,10 +66,4 @@ open class AimeHostService : HostNfcFService() {
     }
 
     private data class CachedImage(val profile: CardProfile, val image: CardImage)
-}
-
-class StaticAimeHostService : AimeHostService()
-
-class DefaultHcefCardService : AimeHostService() {
-    override val imageSystemCode: String = HceSession.GENERIC_SYSTEM_CODE
 }

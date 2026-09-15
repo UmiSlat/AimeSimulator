@@ -10,12 +10,6 @@ ROOT = Path(__file__).resolve().parents[1]
 APK = ROOT / "app" / "build" / "outputs" / "apk" / "debug" / "app-debug.apk"
 MODULE = ROOT / "dist" / "aimesim-pmm-ksu-v3.zip"
 HCEF_SERVICE = ROOT / "app" / "src" / "main" / "res" / "xml" / "host_nfcf_service.xml"
-STATIC_HCEF_SERVICE = (
-    ROOT / "app" / "src" / "main" / "res" / "xml" / "host_nfcf_static_aime_service.xml"
-)
-DEFAULT_HCEF_SERVICE = (
-    ROOT / "app" / "src" / "main" / "res" / "xml" / "host_nfcf_default_card_service.xml"
-)
 ANDROID_NAMESPACE = "{http://schemas.android.com/apk/res/android}"
 
 
@@ -44,8 +38,6 @@ def require_hcef_metadata(path: Path, system_code: str, nfcid2: str, pmm: str) -
 
 def main() -> None:
     require_hcef_metadata(HCEF_SERVICE, "4000", "02FE000000000000", "00F1000000014300")
-    require_hcef_metadata(STATIC_HCEF_SERVICE, "88B4", "02FE001145141919", "00F1000000014300")
-    require_hcef_metadata(DEFAULT_HCEF_SERVICE, "4000", "02FE001145141919", "00F1000000014300")
     require_archive(APK, {
         "AndroidManifest.xml",
         "META-INF/xposed/java_init.list",

@@ -14,11 +14,12 @@ The printed Access Code is display-only local metadata. Physical-card profile
 capture does not infer or save it, and it does not alter HCE-F registration or
 the emulated card image.
 
-Normal mode registers the profile IDm with Android. Compatibility mode registers
-`02FE001145141919` while retaining the profile IDm inside the emulated card image.
-The system code is `88B4`. The HCE-F service metadata statically declares the
-advertised PMm as `00F1000000014300`; supported Android NFC stacks use this value
-without a native PMm hook.
+Normal mode registers the profile IDm with Android. Fixed compatibility mode
+registers `02FE001145141919`; prefix compatibility mode combines `02FE` with the
+profile IDm's final 12 hexadecimal digits. Both compatibility modes retain the
+profile IDm inside the emulated card image. The system code is `88B4`. The HCE-F
+service metadata statically declares the advertised PMm as `00F1000000014300`;
+supported Android NFC stacks use this value without a native PMm hook.
 
 ## HCE-F protocol
 
@@ -34,9 +35,10 @@ not modified. Unsupported commands return the four-byte compatibility response
 The default card image contains zero-filled user blocks, an all-`FF` block `0E`,
 the selected profile IDm in block `82`, PMm metadata in block `83`, system code in
 block `85`, and fixed compatibility metadata in blocks `86` and `88`. Captured
-SPAD0 and ID-block values override their generated counterparts. The separate
-generic HCE-F diagnostic advertises `4000` and uses the same value in block `85`;
-the dynamic and static Aime services use `88B4` in both places.
+SPAD0 and ID-block values override their generated counterparts. Block `85`
+always contains `88B4`. The single HCE-F service uses Android-compatible static
+placeholder routing metadata, then foreground activation dynamically registers
+the selected NFCID2 and System Code `88B4`.
 
 ## Physical-card reading
 
@@ -62,10 +64,11 @@ creation never modify the physical card.
 
 ## Android service registration
 
-The UI persists a profile selection before activation. Activation disables the
-foreground HCE-F service, registers NFCID2 and system code, then enables the service.
-Registration failures report their exact stage without corrupting the stored profile
-list. The selected profile is reactivated when the activity returns to the foreground.
+The UI updates the in-process profile selection before activation and persists it
+asynchronously. Activation disables the foreground HCE-F service, registers NFCID2
+and system code, then enables the service. Registration failures report their exact
+stage and restore the previous selection without corrupting the stored profile list.
+The selected profile is reactivated when the activity returns to the foreground.
 If the NFC Binder dies while the NFC process is restarting, the UI waits and retries
 for a bounded interval instead of crashing or reporting an immediate permanent failure.
 

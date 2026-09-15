@@ -20,7 +20,7 @@ internal class HceActivationWorkflow(
 
     interface Selection {
         fun selectedProfileId(): String?
-        fun select(profileId: String?): Boolean
+        fun select(profileId: String?)
     }
 
     fun activate(profileId: String, nfcid2: String, systemCode: String): HceSession.Report {
@@ -41,9 +41,7 @@ internal class HceActivationWorkflow(
 
         val previousId = selection.selectedProfileId()
         val selectionChanged = previousId != profileId
-        if (selectionChanged && !selection.select(profileId)) {
-            return HceSession.Report(HceSession.Stage.STORAGE)
-        }
+        if (selectionChanged) selection.select(profileId)
 
         return try {
             backend.disable()

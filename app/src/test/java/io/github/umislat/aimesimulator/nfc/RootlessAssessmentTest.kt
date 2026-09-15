@@ -64,16 +64,6 @@ class RootlessAssessmentTest {
         assertEquals(RootlessAssessment.Outcome.LINK_ACTIVE, assessment.outcome)
     }
 
-    @Test fun reportsProfileStorageFailure() {
-        val assessment = RootlessAssessment.from(
-            HceSession.Report(HceSession.Stage.STORAGE),
-            routeMode = IdmRouteMode.ORIGINAL,
-            hasProfile = true
-        )
-
-        assertEquals(RootlessAssessment.Outcome.STORAGE_FAILED, assessment.outcome)
-    }
-
     @Test fun requiresAProfileBeforeTesting() {
         val assessment = RootlessAssessment.from(
             report = null,

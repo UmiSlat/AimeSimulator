@@ -3,10 +3,7 @@ package io.github.umislat.aimesimulator.nfc
 import io.github.umislat.aimesimulator.data.CardProfile
 import io.github.umislat.aimesimulator.data.HexCodec
 
-internal class CardImage(
-    profile: CardProfile,
-    systemCode: String = HceSession.SYSTEM_CODE
-) {
+internal class CardImage(profile: CardProfile) {
     private val blocks = HashMap<Int, ByteArray>()
 
     init {
@@ -16,7 +13,7 @@ internal class CardImage(
         blocks[0x81] = ByteArray(16)
         blocks[0x83] = fixedBlock("000000000000000000F1000000014300")
         blocks[0x84] = fixedBlock("0000")
-        blocks[0x85] = fixedBlock(systemCode)
+        blocks[0x85] = fixedBlock(HceSession.SYSTEM_CODE)
         blocks[0x86] = fixedBlock("0001")
         blocks[0x87] = ByteArray(16)
         blocks[0x88] = fixedBlock("FE7F000007011E00FF41FF4101")

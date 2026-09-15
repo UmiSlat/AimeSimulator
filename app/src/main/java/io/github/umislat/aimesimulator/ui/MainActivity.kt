@@ -72,14 +72,9 @@ class MainActivity : AppCompatActivity() {
     private var hceRetryAction: MaterialButton? = null
     private var lastHceReport: HceSession.Report? = null
     private var persistedRouteReport: PersistedHceRouteWorkflow.Result? = null
-    private var defaultHcefReport: HceSession.Report? = null
-    private var staticDiagnosticReport: HceSession.Report? = null
     private var rootlessStatusView: TextView? = null
     private var rootlessDetailView: TextView? = null
     private var persistedRouteModeSwitch: MaterialSwitch? = null
-    private var persistedRouteStatusView: TextView? = null
-    private var defaultHcefStatusView: TextView? = null
-    private var staticDiagnosticStatusView: TextView? = null
 
     private val nfcStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -175,16 +170,12 @@ class MainActivity : AppCompatActivity() {
             NfcAdapterStatePolicy.Action.MARK_DISABLED -> {
                 cancelActivationRetry()
                 persistedRouteReport = null
-                defaultHcefReport = null
-                staticDiagnosticReport = null
                 lastHceReport = HceSession.Report(HceSession.Stage.NFC_DISABLED)
                 setHceStatus(getString(R.string.nfc_disabled))
             }
             NfcAdapterStatePolicy.Action.MARK_ENABLING -> {
                 cancelActivationRetry()
                 persistedRouteReport = null
-                defaultHcefReport = null
-                staticDiagnosticReport = null
                 lastHceReport = HceSession.Report(HceSession.Stage.SERVICE_RESTARTING)
                 setHceStatus(getString(R.string.hce_waiting_for_service))
             }
@@ -240,9 +231,6 @@ class MainActivity : AppCompatActivity() {
         rootlessStatusView = null
         rootlessDetailView = null
         persistedRouteModeSwitch = null
-        persistedRouteStatusView = null
-        defaultHcefStatusView = null
-        staticDiagnosticStatusView = null
         defaultNfcStatusView = null
         defaultNfcAction = null
         pmmSwitch = null
@@ -445,6 +433,18 @@ class MainActivity : AppCompatActivity() {
                     alpha = 0.7f
                     setPadding(0, dp(6), 0, 0)
                 })
+                rootlessStatusView = TextView(this@MainActivity).apply {
+                    textSize = 15f
+                    setTypeface(typeface, Typeface.BOLD)
+                    setPadding(0, dp(14), 0, 0)
+                }
+                addView(rootlessStatusView)
+                rootlessDetailView = TextView(this@MainActivity).apply {
+                    textSize = 13f
+                    alpha = 0.76f
+                    setPadding(0, dp(4), 0, 0)
+                }
+                addView(rootlessDetailView)
                 val retryAction = MaterialButton(
                     this@MainActivity,
                     null,
@@ -460,8 +460,8 @@ class MainActivity : AppCompatActivity() {
                 })
             })
         })
-        content.addView(sectionTitle(R.string.default_nfc_app))
-        content.addView(defaultNfcAppCard())
+        content.addView(sectionTitle(R.string.current_profile))
+        content.addView(currentProfileCard())
         content.addView(sectionTitle(R.string.route_mode))
         content.addView(routeModeSelector())
         content.addView(TextView(this).apply {
@@ -470,13 +470,11 @@ class MainActivity : AppCompatActivity() {
             alpha = 0.72f
             setPadding(0, 0, 0, dp(8))
         })
-
-        content.addView(sectionTitle(R.string.rootless_check))
-        content.addView(rootlessCard())
-        content.addView(sectionTitle(R.string.current_profile))
-        content.addView(currentProfileCard())
-        content.addView(sectionTitle(R.string.pmm_patch))
-        content.addView(pmmCard())
+        content.addView(sectionTitle(R.string.system_requirements))
+        content.addView(defaultNfcAppCard())
+        content.addView(pmmCard().apply { applyMargins(vertical = 6) })
+        content.addView(sectionTitle(R.string.advanced_compatibility))
+        content.addView(persistedRouteCard())
         scroll.addView(content)
         return scroll
     }
@@ -487,8 +485,14 @@ class MainActivity : AppCompatActivity() {
         addView(LinearLayout(this@MainActivity).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(18), dp(14), dp(18), dp(14))
+            addView(TextView(this@MainActivity).apply {
+                setText(R.string.default_nfc_app)
+                textSize = 16f
+                setTypeface(typeface, Typeface.BOLD)
+            })
             defaultNfcStatusView = TextView(this@MainActivity).apply {
                 textSize = 14f
+                setPadding(0, dp(6), 0, 0)
             }
             addView(defaultNfcStatusView)
             defaultNfcAction = MaterialButton(
@@ -552,23 +556,12 @@ class MainActivity : AppCompatActivity() {
         IdmRouteMode.PREFIX_COMPATIBILITY -> R.string.status_profile_prefix_compatibility
     }
 
-    private fun rootlessCard(): MaterialCardView = MaterialCardView(this).apply {
+    private fun persistedRouteCard(): MaterialCardView = MaterialCardView(this).apply {
         radius = dp(20).toFloat()
         strokeWidth = dp(1)
         addView(LinearLayout(this@MainActivity).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(16), dp(18), dp(14))
-            rootlessStatusView = TextView(this@MainActivity).apply {
-                textSize = 17f
-                setTypeface(typeface, Typeface.BOLD)
-            }
-            addView(rootlessStatusView)
-            rootlessDetailView = TextView(this@MainActivity).apply {
-                textSize = 13f
-                alpha = 0.76f
-                setPadding(0, dp(6), 0, dp(8))
-            }
-            addView(rootlessDetailView)
+            setPadding(dp(18), dp(12), dp(18), dp(14))
             persistedRouteModeSwitch = MaterialSwitch(this@MainActivity).apply {
                 setText(R.string.persisted_route_only_mode)
                 isChecked = store.persistedRouteOnlyMode()
@@ -579,56 +572,12 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             addView(persistedRouteModeSwitch)
-            persistedRouteStatusView = TextView(this@MainActivity).apply {
+            addView(TextView(this@MainActivity).apply {
+                setText(R.string.persisted_route_only_summary)
                 textSize = 13f
                 alpha = 0.76f
-                setPadding(0, dp(4), 0, dp(10))
-            }
-            addView(persistedRouteStatusView)
-            defaultHcefStatusView = TextView(this@MainActivity).apply {
-                textSize = 13f
-                alpha = 0.76f
-                setPadding(0, 0, 0, dp(10))
-            }
-            addView(defaultHcefStatusView)
-            staticDiagnosticStatusView = TextView(this@MainActivity).apply {
-                textSize = 13f
-                alpha = 0.76f
-                setPadding(0, 0, 0, dp(10))
-            }
-            addView(staticDiagnosticStatusView)
-            addView(MaterialButton(
-                this@MainActivity,
-                null,
-                com.google.android.material.R.attr.materialButtonOutlinedStyle
-            ).apply {
-                setText(R.string.rootless_check_88b4)
-                setOnClickListener { activateDynamicRoute() }
-            }, LinearLayout.LayoutParams(-1, -2))
-            addView(MaterialButton(
-                this@MainActivity,
-                null,
-                com.google.android.material.R.attr.materialButtonOutlinedStyle
-            ).apply {
-                setText(R.string.rootless_reuse_persisted_route)
-                setOnClickListener { activatePersistedRoute() }
-            }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6) })
-            addView(MaterialButton(
-                this@MainActivity,
-                null,
-                com.google.android.material.R.attr.materialButtonOutlinedStyle
-            ).apply {
-                setText(R.string.rootless_test_4000)
-                setOnClickListener { activateDefaultHcefCard() }
-            }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6) })
-            addView(MaterialButton(
-                this@MainActivity,
-                null,
-                com.google.android.material.R.attr.materialButtonOutlinedStyle
-            ).apply {
-                setText(R.string.rootless_test_static_88b4)
-                setOnClickListener { activateStaticAimeDiagnostic() }
-            }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6) })
+                setPadding(0, dp(4), 0, 0)
+            })
         })
     }
 
@@ -917,22 +866,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun activateDynamicRoute() {
-        if (store.persistedRouteOnlyMode()) {
-            store.setPersistedRouteOnlyMode(false)
-            persistedRouteModeSwitch?.isChecked = false
-        }
-        activateSelected()
-    }
-
     private fun activateSelected(
         attempt: Int = 0,
         retryKind: ActivationRetryKind? = null
     ) {
         cancelActivationRetry()
         persistedRouteReport = null
-        defaultHcefReport = null
-        staticDiagnosticReport = null
         val selected = store.selectedProfile()
         if (selected == null) {
             session.deactivate(this)
@@ -981,7 +920,6 @@ class MainActivity : AppCompatActivity() {
                 } else getString(R.string.hce_service_restart_timeout)
             }
             HceSession.Stage.LINK_ACTIVE -> getString(R.string.hce_waiting_for_link_release)
-            HceSession.Stage.STORAGE -> getString(R.string.hce_storage_failed)
             HceSession.Stage.ID -> getString(R.string.hce_nfcid2_rejected)
             HceSession.Stage.SYSTEM_CODE -> getString(R.string.hce_system_code_rejected)
             HceSession.Stage.ENABLE -> getString(R.string.hce_enable_failed)
@@ -1000,8 +938,6 @@ class MainActivity : AppCompatActivity() {
     ) {
         cancelActivationRetry()
         lastHceReport = null
-        defaultHcefReport = null
-        staticDiagnosticReport = null
         val selected = store.selectedProfile()
         if (selected == null) {
             session.deactivate(this)
@@ -1032,39 +968,6 @@ class MainActivity : AppCompatActivity() {
         renderRootlessAssessment()
     }
 
-    private fun activateDefaultHcefCard() {
-        cancelActivationRetry()
-        persistedRouteReport = null
-        staticDiagnosticReport = null
-        if (store.selectedProfile() == null) {
-            session.deactivate(this)
-            defaultHcefReport = null
-            setHceStatus(getString(R.string.select_or_add_card))
-            renderDiagnosticReports()
-            return
-        }
-        val report = session.activateDefaultHcefCard(this)
-        defaultHcefReport = report
-        setHceStatus(
-            if (report.succeeded) getString(R.string.generic_hcef_active)
-            else defaultHcefMessage(report)
-        )
-        renderDiagnosticReports()
-    }
-
-    private fun activateStaticAimeDiagnostic() {
-        cancelActivationRetry()
-        persistedRouteReport = null
-        defaultHcefReport = null
-        val report = session.activateStaticAimeDiagnostic(this)
-        staticDiagnosticReport = report
-        setHceStatus(
-            if (report.succeeded) getString(R.string.static_hcef_active)
-            else staticHcefMessage(report)
-        )
-        renderDiagnosticReports()
-    }
-
     private fun setHceStatus(message: CharSequence) {
         hceStatusText = message
         updateHceStatusViews()
@@ -1083,8 +986,8 @@ class MainActivity : AppCompatActivity() {
     private fun renderRootlessAssessment() {
         if (store.persistedRouteOnlyMode()) {
             rootlessStatusView?.setText(R.string.persisted_route_only_title)
-            rootlessDetailView?.setText(R.string.persisted_route_only_detail)
-            renderDiagnosticReports()
+            rootlessDetailView?.text = persistedRouteReport?.let(::persistedRouteMessage)
+                ?: getString(R.string.persisted_route_only_detail)
             return
         }
         val assessment = RootlessAssessment.from(
@@ -1111,8 +1014,6 @@ class MainActivity : AppCompatActivity() {
                 R.string.rootless_checking_title to R.string.rootless_checking_detail
             RootlessAssessment.Outcome.LINK_ACTIVE ->
                 R.string.rootless_link_active_title to R.string.rootless_link_active_detail
-            RootlessAssessment.Outcome.STORAGE_FAILED ->
-                R.string.rootless_storage_title to R.string.rootless_storage_detail
             RootlessAssessment.Outcome.DYNAMIC_ID_REJECTED ->
                 R.string.rootless_dynamic_id_title to R.string.rootless_dynamic_id_detail
             RootlessAssessment.Outcome.COMPATIBILITY_ID_REJECTED -> if (
@@ -1134,22 +1035,6 @@ class MainActivity : AppCompatActivity() {
             getString(detail, assessment.detail.ifBlank { getString(R.string.rootless_unknown_error) })
         } else {
             getString(detail)
-        }
-        renderDiagnosticReports()
-    }
-
-    private fun renderDiagnosticReports() {
-        renderPersistedRoute()
-        renderDefaultHcefCard()
-        renderStaticDiagnostic()
-    }
-
-    private fun renderPersistedRoute() {
-        val report = persistedRouteReport
-        persistedRouteStatusView?.text = if (report == null) {
-            getString(R.string.persisted_route_idle)
-        } else {
-            persistedRouteMessage(report)
         }
     }
 
@@ -1174,70 +1059,6 @@ class MainActivity : AppCompatActivity() {
                 report.detail.ifBlank { getString(R.string.rootless_unknown_error) }
             )
         }
-
-    private fun renderDefaultHcefCard() {
-        val report = defaultHcefReport
-        defaultHcefStatusView?.text = if (report == null) {
-            getString(R.string.generic_hcef_idle)
-        } else {
-            defaultHcefMessage(report)
-        }
-    }
-
-    private fun defaultHcefMessage(report: HceSession.Report): String = when (report.stage) {
-        HceSession.Stage.READY -> getString(
-            R.string.generic_hcef_ready,
-            CardProfile.COMPATIBILITY_IDM.chunked(4).joinToString(" "),
-            STANDARD_PMM_DISPLAY
-        )
-        HceSession.Stage.UNSUPPORTED -> getString(R.string.rootless_unsupported_detail)
-        HceSession.Stage.NFC_DISABLED -> getString(R.string.rootless_nfc_disabled_detail)
-        HceSession.Stage.SERVICE_RESTARTING -> getString(R.string.rootless_checking_detail)
-        HceSession.Stage.LINK_ACTIVE -> getString(R.string.rootless_link_active_detail)
-        HceSession.Stage.STORAGE -> getString(R.string.hce_storage_failed)
-        HceSession.Stage.ID -> getString(R.string.generic_hcef_id_rejected)
-        HceSession.Stage.SYSTEM_CODE -> getString(R.string.generic_hcef_system_code_rejected)
-        HceSession.Stage.ENABLE -> getString(R.string.generic_hcef_enable_failed)
-        HceSession.Stage.EXCEPTION -> getString(
-            R.string.generic_hcef_failed,
-            report.detail.ifBlank { getString(R.string.rootless_unknown_error) }
-        )
-    }
-
-    private fun renderStaticDiagnostic() {
-        val report = staticDiagnosticReport
-        staticDiagnosticStatusView?.text = if (report == null) {
-            getString(R.string.static_hcef_idle)
-        } else {
-            staticHcefMessage(report)
-        }
-    }
-
-    private fun staticHcefMessage(report: HceSession.Report): String = when (report.stage) {
-        HceSession.Stage.READY -> getString(
-            R.string.static_hcef_ready,
-            HceSession.STATIC_AIME_IDM.chunked(4).joinToString(" "),
-            STANDARD_PMM_DISPLAY
-        )
-        HceSession.Stage.UNSUPPORTED -> getString(R.string.rootless_unsupported_detail)
-        HceSession.Stage.NFC_DISABLED -> getString(R.string.rootless_nfc_disabled_detail)
-        HceSession.Stage.SERVICE_RESTARTING -> getString(R.string.rootless_checking_detail)
-        HceSession.Stage.LINK_ACTIVE -> getString(R.string.rootless_link_active_detail)
-        HceSession.Stage.STORAGE -> getString(R.string.hce_storage_failed)
-        HceSession.Stage.ID -> getString(
-            R.string.static_hcef_id_removed,
-            report.detail.ifBlank { getString(R.string.value_unavailable) }
-        )
-        HceSession.Stage.SYSTEM_CODE -> getString(
-            R.string.static_hcef_system_code_removed,
-            report.detail.ifBlank { getString(R.string.value_unavailable) }
-        )
-        HceSession.Stage.ENABLE -> getString(R.string.static_hcef_enable_failed)
-        HceSession.Stage.EXCEPTION -> getString(
-            R.string.static_hcef_failed,
-            report.detail.ifBlank { getString(R.string.rootless_unknown_error) }
-        )
-    }
 
     private fun scheduleActivationRetry(attempt: Int, kind: ActivationRetryKind) {
         activationRetry = Runnable {
@@ -1476,10 +1297,7 @@ class MainActivity : AppCompatActivity() {
                     Snackbar.make(root, R.string.invalid_card_fields, Snackbar.LENGTH_LONG).show()
                     return@setOnClickListener
                 }
-                if (!store.put(profile)) {
-                    Snackbar.make(root, R.string.save_failed, Snackbar.LENGTH_LONG).show()
-                    return@setOnClickListener
-                }
+                store.put(profile)
                 if (initial == null && store.selectedProfile() == null) store.select(profile.profileId)
                 dialog.dismiss()
                 activateConfiguredRoute()
