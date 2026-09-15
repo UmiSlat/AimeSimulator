@@ -29,7 +29,7 @@
     <string name="default_nfc_app">默认 NFC 应用</string>
     <string name="default_nfc_app_active">AimeSimulator 已是默认非接触式支付应用；恢复原钱包前，原钱包的碰一碰支付可能不可用。</string>
     <string name="default_nfc_app_inactive">AimeSimulator 不是默认非接触式支付应用；切换后可能替换 Android 当前选中的钱包应用。</string>
-    <string name="default_nfc_app_requested">正在等待系统选择完成。</string>
+    <string name="default_nfc_app_requested">已打开系统默认钱包设置，请在其中选择 AimeSimulator 后返回。</string>
     <string name="default_nfc_app_not_ready">请开启 NFC 后再检查默认非接触式应用。</string>
     <string name="default_nfc_app_unsupported">此设备不支持 Android 主机卡模拟。</string>
     <string name="default_nfc_app_failed">Android 无法返回当前默认非接触式应用。</string>
@@ -37,7 +37,7 @@
     <string name="restore_wallet_app">恢复手机钱包</string>
     <string name="restore_wallet_settings_failed">无法打开钱包设置，请在系统设置的“默认应用”或“非接触式付款”中恢复原钱包。</string>
     <string name="default_nfc_guidance_title">默认 NFC 应用与手机钱包</string>
-    <string name="default_nfc_guidance_inactive">部分 Android 系统要求 AimeSimulator 成为默认非接触式应用后才能运行 HCE-F。选择本应用会暂时替换当前手机钱包，并可能使碰一碰支付不可用。测试结束后，请在“状态”页点击“恢复手机钱包”，再到系统设置中重新选择原钱包。</string>
+    <string name="default_nfc_guidance_inactive">部分 Android 系统要求 AimeSimulator 成为默认非接触式应用后才能运行 HCE-F。选择本应用会暂时替换当前手机钱包，并可能使碰一碰支付不可用。“现在选择”会打开系统默认钱包设置，请在其中选择 AimeSimulator。测试结束后，请在“状态”页点击“恢复手机钱包”并重新选择原钱包。</string>
     <string name="default_nfc_guidance_active">AimeSimulator 当前是默认非接触式应用，原钱包的碰一碰支付可能暂时不可用。测试结束后，请在“状态”页点击“恢复手机钱包”，再到系统设置中重新选择原钱包。</string>
     <string name="choose_default_nfc_now">现在选择</string>
     <string name="not_now">暂不更改</string>
